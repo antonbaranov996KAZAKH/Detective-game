@@ -1,0 +1,58 @@
+!DOCTYPE html
+html lang=ru
+head
+meta charset=UTF-8
+titleАдминкаtitle
+style
+body { font-family sans-serif; padding 20px; }
+button { margin 5px; }
+style
+head
+body
+h1Админкаh1
+
+button onclick=resetGame()Сбросить игруbutton
+
+h2Открыть локациюh2
+input type=text id=locationId placeholder=ID локации
+button onclick=openLocation()Открытьbutton
+
+h2Добавить уликуh2
+input type=text id=evidenceId placeholder=ID улики
+button onclick=addEvidence()Добавитьbutton
+
+h2Таймерh2
+input type=number id=timerDelta placeholder=мин
+button onclick=adjustTimer()Изменитьbutton
+
+script
+function resetGame() {
+    fetch('apiadminreset', { method 'POST' });
+}
+function openLocation() {
+    const id = document.getElementById('locationId').value;
+    fetch('apiadminopenLocation', { 
+        method 'POST',
+        headers {'Content-Type''applicationjson'},
+        body JSON.stringify({id})
+    });
+}
+function addEvidence() {
+    const id = document.getElementById('evidenceId').value;
+    fetch('apiadminaddEvidence', { 
+        method 'POST',
+        headers {'Content-Type''applicationjson'},
+        body JSON.stringify({id})
+    });
+}
+function adjustTimer() {
+    const delta = parseInt(document.getElementById('timerDelta').value);
+    fetch('apiadminadjustTimer', { 
+        method 'POST',
+        headers {'Content-Type''applicationjson'},
+        body JSON.stringify({delta})
+    });
+}
+script
+body
+html

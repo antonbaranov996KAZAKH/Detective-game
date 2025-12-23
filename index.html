@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Детектив</title>
+</head>
+<body>
+  <h2>Вход в команду</h2>
+  <input id="teamCode" placeholder="Введите код команды">
+  <button onclick="login()">Войти</button>
+
+  <div id="game" style="display:none">
+    <h3>Поездок осталось: <span id="tripsLeft"></span></h3>
+    <input id="addressInput" placeholder="Введите адрес">
+    <button onclick="goTrip()">Поехать</button>
+    <h3>История поездок</h3>
+    <ul id="tripsHistory"></ul>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
