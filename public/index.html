@@ -1,22 +1,15 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Детектив</title>
-</head>
-<body>
-  <h2>Вход в команду</h2>
-  <input id="teamCode" placeholder="Введите код команды">
-  <button onclick="login()">Войти</button>
-
-  <div id="game" style="display:none">
-    <h3>Поездок осталось: <span id="tripsLeft"></span></h3>
-    <input id="addressInput" placeholder="Введите адрес">
+<div id="game">
+  <!-- Основная информация всегда видна -->
+  <div id="main-info" style="position: sticky; top: 0; background: #f0f0f0; padding: 10px; z-index: 10; border-bottom: 1px solid #ccc;">
+    <span>Команда: <b id="teamCodeDisplay"></b></span> |
+    <span>Поездок: <b id="tripsLeft">0</b></span>
+    <br>
+    <input type="text" id="addressInput" placeholder="Введите адрес">
     <button onclick="goTrip()">Поехать</button>
-    <h3>История поездок</h3>
-    <ul id="tripsHistory" style="white-space: pre-wrap;"></ul>
   </div>
 
-  <script src="script.js"></script>
-</body>
-</html>
+  <!-- История поездок с прокруткой -->
+  <div id="history-box" style="height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-top: 10px; background: #fff;">
+    <ul id="tripsHistory" style="margin: 0; padding-left: 20px; list-style: decimal;"></ul>
+  </div>
+</div>
