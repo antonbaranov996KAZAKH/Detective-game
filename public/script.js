@@ -1,5 +1,5 @@
 let teamCode = '';
-let tripCounter = 0; // вместо tripsLeft
+let tripCounter = 0;
 
 function login() {
   teamCode = document.getElementById('teamCode').value.trim();
@@ -18,6 +18,9 @@ function login() {
     document.getElementById('tripsLeft').textContent = tripCounter;
     document.getElementById('teamCodeDisplay').textContent = teamCode;
     updateHistory(data.tripsHistory);
+
+    // Скрываем логин, показываем игру
+    document.getElementById('login-screen').style.display = 'none';
     document.getElementById('game').style.display = 'block';
   });
 }
