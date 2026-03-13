@@ -1,182 +1,205 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Игра</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #f8f8f8;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Игра поездки</title>
 
-    /* Блок логина */
-    #login-screen {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      padding: 20px;
-    }
-    #login-screen input, #login-screen button {
-      width: 100%;
-      max-width: 400px;
-      margin-bottom: 10px;
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 5px;
-      box-sizing: border-box;
-    }
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f8f8f8;
+  }
 
-    /* Блок игры */
-    #game {
-      display: none;
-      width: 95%;
-      max-width: 500px;
-      margin: 0 auto;
-      padding: 10px;
-    }
+  /* Экран логина */
+  #login-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    padding: 20px;
+  }
+  #login-screen input, #login-screen button {
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 10px;
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 5px;
+    box-sizing: border-box;
+  }
+  #login-screen button {
+    background: #4CAF50;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+  }
+  #login-screen button:hover {
+    background: #45a049;
+  }
 
-    /* Основная информация и ввод */
-    #main-info {
-      position: sticky;
-      top: 0;
-      background: #fff;
-      padding: 10px;
-      border-bottom: 1px solid #ccc;
-      z-index: 10;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-    #main-info span {
-      font-weight: bold;
-    }
-    #main-info input, #main-info button {
-      width: 100%;
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 5px;
-      box-sizing: border-box;
-    }
-    #main-info button {
-      cursor: pointer;
-      background: #4CAF50;
-      color: white;
-      border: none;
-    }
-    #main-info button:hover {
-      background: #45a049;
-    }
+  /* Экран игры */
+  #game {
+    display: none;
+    width: 95%;
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 10px;
+  }
 
-    /* История поездок */
-    #history-box {
-      height: 300px;
-      overflow-y: auto;
-      padding: 10px;
-      margin-top: 10px;
-      border: 1px solid #ccc;
-      background: #fff;
-    }
-    #tripsHistory {
-      margin: 0;
-      padding-left: 20px;
-      list-style: decimal;
-    }
+  /* Основная информация и ввод */
+  #main-info {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  #main-info span { font-weight: bold; }
+  #main-info input, #main-info button {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 5px;
+    box-sizing: border-box;
+  }
+  #main-info button {
+    cursor: pointer;
+    background: #4CAF50;
+    color: white;
+    border: none;
+  }
+  #main-info button:hover { background: #45a049; }
 
-    /* Адаптация для маленьких экранов */
-    @media (max-width: 400px) {
-      #history-box {
-        height: 200px;
-      }
-    }
-  </style>
+  /* История поездок */
+  #history-box {
+    height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+    margin-top: 10px;
+    border: 1px solid #ccc;
+    background: #fff;
+    white-space: pre-wrap; /* сохраняет переносы строк */
+  }
+  #tripsHistory {
+    margin: 0;
+    padding-left: 20px;
+    list-style: decimal;
+  }
+
+  /* Анимация счётчика поездок */
+  @keyframes jump {
+    0% { transform: scale(1); color: #000; }
+    30% { transform: scale(1.5); color: #4CAF50; }
+    60% { transform: scale(1.2); color: #000; }
+    100% { transform: scale(1); color: #000; }
+  }
+  .jump { animation: jump 0.5s ease; }
+
+  /* Адаптация для маленьких экранов */
+  @media (max-width: 400px) {
+    #history-box { height: 200px; }
+  }
+</style>
+
 </head>
 <body>
 
-  <!-- Экран логина -->
-  <div id="login-screen">
-    <input type="text" id="teamCode" placeholder="Введите код команды">
-    <button onclick="login()">Войти</button>
+<!-- Экран логина -->
+<div id="login-screen">
+  <input type="text" id="teamCode" placeholder="Введите код команды">
+  <button onclick="login()">Войти</button>
+</div>
+
+<!-- Экран игры -->
+<div id="game">
+  <div id="main-info">
+    <span>Команда: <b id="teamCodeDisplay"></b></span>
+    <span>Поездок: <b id="tripsLeft">0</b></span>
+    <input type="text" id="addressInput" placeholder="Введите адрес">
+    <button onclick="goTrip()">Поехать</button>
   </div>
 
-  <!-- Экран игры -->
-  <div id="game">
-    <div id="main-info">
-      <span>Команда: <b id="teamCodeDisplay"></b></span>
-      <span>Поездок: <b id="tripsLeft">0</b></span>
-      <input type="text" id="addressInput" placeholder="Введите адрес">
-      <button onclick="goTrip()">Поехать</button>
-    </div>
-
-    <div id="history-box">
-      <ul id="tripsHistory"></ul>
-    </div>
+  <div id="history-box">
+    <ul id="tripsHistory"></ul>
   </div>
+</div>
 
-  <script>
-    let teamCode = '';
-    let tripCounter = 0;
+<script>
+let teamCode = '';
+let tripCounter = 0;
 
-    function login() {
-      teamCode = document.getElementById('teamCode').value.trim();
-      if (!teamCode) return alert('Введите код команды');
+function login() {
+  teamCode = document.getElementById('teamCode').value.trim();
+  if (!teamCode) return alert('Введите код команды');
 
-      fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamCode })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (!data.success) return alert('Ошибка входа');
+  fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teamCode })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (!data.success) return alert('Ошибка входа');
 
-        tripCounter = data.tripsHistory.length;
-        document.getElementById('tripsLeft').textContent = tripCounter;
-        document.getElementById('teamCodeDisplay').textContent = teamCode;
-        updateHistory(data.tripsHistory);
+    tripCounter = data.tripsHistory.length;
+    document.getElementById('tripsLeft').textContent = tripCounter;
+    document.getElementById('teamCodeDisplay').textContent = teamCode;
+    updateHistory(data.tripsHistory);
 
-        // Скрываем логин, показываем игру
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('game').style.display = 'block';
-      });
-    }
+    // Скрываем логин, показываем игру
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('game').style.display = 'block';
+  });
+}
 
-    function goTrip() {
-      const address = document.getElementById('addressInput').value.trim();
-      if (!address) return alert('Введите адрес');
+function goTrip() {
+  const address = document.getElementById('addressInput').value.trim();
+  if (!address) return alert('Введите адрес');
 
-      fetch('/api/trip', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamCode, address })
-      })
-      .then(res => res.json())
-      .then(data => {
-        tripCounter++;
-        document.getElementById('tripsLeft').textContent = tripCounter;
-        updateHistory(data.tripsHistory);
-        alert(data.info);
+  fetch('/api/trip', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teamCode, address })
+  })
+  .then(res => res.json())
+  .then(data => {
+    tripCounter++;
+    const tripsEl = document.getElementById('tripsLeft');
+    tripsEl.textContent = tripCounter;
 
-        // Скроллим историю вниз автоматически
-        const historyBox = document.getElementById('history-box');
-        historyBox.scrollTop = historyBox.scrollHeight;
-      });
-    }
+    // Анимация счётчика
+    tripsEl.classList.remove('jump');
+    void tripsEl.offsetWidth; // перезапуск анимации
+    tripsEl.classList.add('jump');
 
-    function updateHistory(history) {
-      const ul = document.getElementById('tripsHistory');
-      ul.innerHTML = '';
-      history.forEach(h => {
-        const li = document.createElement('li');
-        li.textContent = `${h.time} — ${h.address} → ${h.info}`;
-        ul.appendChild(li);
-      });
-    }
-  </script>
+    updateHistory(data.tripsHistory);
+    alert(data.info);
+
+    // Скроллим историю вниз
+    const historyBox = document.getElementById('history-box');
+    historyBox.scrollTop = historyBox.scrollHeight;
+  });
+}
+
+function updateHistory(history) {
+  const ul = document.getElementById('tripsHistory');
+  ul.innerHTML = '';
+  history.forEach(h => {
+    const li = document.createElement('li');
+    // Переносы строк сохраняются через CSS
+    li.textContent = `${h.time} — ${h.address} → ${h.info}`;
+    ul.appendChild(li);
+  });
+}
+</script>
 
 </body>
 </html>
