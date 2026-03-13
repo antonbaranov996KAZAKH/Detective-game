@@ -14,9 +14,9 @@ function login() {
   .then(data => {
     if (!data.success) return alert('Ошибка входа');
     
-    // убираем tripsLeft, считаем уже сделанные поездки
-    tripCounter = data.tripsHistory.length; 
-    document.getElementById('tripsLeft').textContent = tripCounter; // теперь просто счётчик
+    tripCounter = data.tripsHistory.length;
+    document.getElementById('tripsLeft').textContent = tripCounter;
+    document.getElementById('teamCodeDisplay').textContent = teamCode;
     updateHistory(data.tripsHistory);
     document.getElementById('game').style.display = 'block';
   });
@@ -33,14 +33,14 @@ function goTrip() {
   })
   .then(res => res.json())
   .then(data => {
-    // увеличиваем счётчик на 1 после каждой поездки
-    tripCounter++; 
+    tripCounter++;
     document.getElementById('tripsLeft').textContent = tripCounter;
     updateHistory(data.tripsHistory);
     alert(data.info);
 
-    // больше лимита нет, так что проверка tripsLeft удалена
-    // if (tripsLeft <= 0) alert('Поездки закончились!');
+    // Скроллим историю вниз автоматически
+    const historyBox = document.getElementById('history-box');
+    historyBox.scrollTop = historyBox.scrollHeight;
   });
 }
 
