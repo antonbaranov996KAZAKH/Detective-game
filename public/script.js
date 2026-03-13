@@ -1,5 +1,5 @@
 let teamCode = '';
-let tripsLeft = 0;
+let tripCounter = 0; // вместо tripsLeft
 
 function login() {
   teamCode = document.getElementById('teamCode').value.trim();
@@ -13,8 +13,10 @@ function login() {
   .then(res => res.json())
   .then(data => {
     if (!data.success) return alert('Ошибка входа');
-    tripsLeft = data.tripsLeft;
-    document.getElementById('tripsLeft').textContent = tripsLeft;
+    
+    // убираем tripsLeft, считаем уже сделанные поездки
+    tripCounter = data.tripsHistory.length; 
+    document.getElementById('tripsLeft').textContent = tripCounter; // теперь просто счётчик
     updateHistory(data.tripsHistory);
     document.getElementById('game').style.display = 'block';
   });
@@ -31,11 +33,14 @@ function goTrip() {
   })
   .then(res => res.json())
   .then(data => {
-    tripsLeft = data.tripsLeft;
-    document.getElementById('tripsLeft').textContent = tripsLeft;
+    // увеличиваем счётчик на 1 после каждой поездки
+    tripCounter++; 
+    document.getElementById('tripsLeft').textContent = tripCounter;
     updateHistory(data.tripsHistory);
     alert(data.info);
-    if (tripsLeft <= 0) alert('Поездки закончились!');
+
+    // больше лимита нет, так что проверка tripsLeft удалена
+    // if (tripsLeft <= 0) alert('Поездки закончились!');
   });
 }
 
