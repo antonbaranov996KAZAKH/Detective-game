@@ -1,4 +1,11 @@
-<div id="game">
+<!-- Экран логина -->
+<div id="login-screen">
+  <input type="text" id="teamCode" placeholder="Введите код команды">
+  <button onclick="login()">Войти</button>
+</div>
+
+<!-- Экран игры (скрыт до входа) -->
+<div id="game" style="display: none;">
   <!-- Основная информация всегда видна -->
   <div id="main-info" style="position: sticky; top: 0; background: #f0f0f0; padding: 10px; z-index: 10; border-bottom: 1px solid #ccc;">
     <span>Команда: <b id="teamCodeDisplay"></b></span> |
