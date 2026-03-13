@@ -13,13 +13,12 @@ function login() {
   .then(res => res.json())
   .then(data => {
     if (!data.success) return alert('Ошибка входа');
-    
+
     tripCounter = data.tripsHistory.length;
     document.getElementById('tripsLeft').textContent = tripCounter;
     document.getElementById('teamCodeDisplay').textContent = teamCode;
     updateHistory(data.tripsHistory);
 
-    // Скрываем логин, показываем игру
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('game').style.display = 'block';
   });
@@ -37,11 +36,18 @@ function goTrip() {
   .then(res => res.json())
   .then(data => {
     tripCounter++;
-    document.getElementById('tripsLeft').textContent = tripCounter;
+    const tripsEl = document.getElementById('tripsLeft');
+    tripsEl.textContent = tripCounter;
+
+    // Анимация счётчика
+    tripsEl.classList.remove('jump');
+    void tripsEl.offsetWidth; // перезапуск анимации
+    tripsEl.classList.add('jump');
+
     updateHistory(data.tripsHistory);
     alert(data.info);
 
-    // Скроллим историю вниз автоматически
+    // Скроллим историю вниз
     const historyBox = document.getElementById('history-box');
     historyBox.scrollTop = historyBox.scrollHeight;
   });
@@ -52,6 +58,7 @@ function updateHistory(history) {
   ul.innerHTML = '';
   history.forEach(h => {
     const li = document.createElement('li');
+    // Сохраняем переносы строк через \n
     li.textContent = `${h.time} — ${h.address} → ${h.info}`;
     ul.appendChild(li);
   });
