@@ -97,20 +97,6 @@ setInterval(() => {
   });
 }
 
-function goTrip() {
-  const address = document.getElementById('addressInput').value.trim();
-  if (!address) return alert('Введите адрес');
-
-  fetch('/api/trip', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ teamCode, address })
-  })
-  .then(res => res.json())
-  .then(data => {
-    tripCounter++;
-    const tripsEl = document.getElementById('tripsLeft');
-    tripsEl.textContent = tripCounter;
 
     // Анимация счётчика
     tripsEl.classList.remove('jump');
