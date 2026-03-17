@@ -124,7 +124,21 @@ function login() {
     });
   }
 }
+function startGame(minutes) {
+  fetch('/api/admin/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ minutes })
+  })
+  .then(res => res.json())
+  .then(data => alert(data.message));
+}
 
+function stopGame() {
+  fetch('/api/admin/stop', { method: 'POST' })
+    .then(res => res.json())
+    .then(data => alert(data.message));
+}
 function goTrip() {
   const address = document.getElementById('addressInput').value.trim();
   if(!address) return alert('Введите адрес');
