@@ -1,5 +1,5 @@
 {
-  "name": "my-game",
+  "name": "detective-game",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
