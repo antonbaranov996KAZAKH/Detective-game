@@ -3,103 +3,269 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
-app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-// ---------------- Игровое состояние ----------------
-let gameState = { isRunning: false, endTime: null };
-let teams = {}; // команды и история поездок
+// ================= GAME STATE =================
+let gameState = {
+  isRunning: false,
+  endTime: null,
+  startTime: null
+};
 
-// ---------------- Загрузка адресов ----------------
+let teams = {}; // { teamCode: { tripsHistory: [] } }
+
+// ================= ЗАГРУЗКА АДРЕСОВ =================
 let addresses = [];
 try {
-  const data = fs.readFileSync(path.join(__dirname, 'data', 'address.json'), 'utf-8');
+  const data = fs.readFileSync(path.join(__dirname, 'data', 'addres.json'), 'utf-8');
   addresses = JSON.parse(data);
+  console.log(`✅ Загружено ${addresses.length} адресов`);
 } catch (e) {
-  console.error('Не удалось загрузить адреса:', e);
+  console.error('❌ Не удалось загрузить addres.json:', e.message);
+  addresses = [];
 }
 
-// ---------------- LOGIN ----------------
+// ================= ADMIN PASSWORD =================
+const ADMIN_PASSWORD = 'admin123';
+
+// ================= СОХРАНЕНИЕ СОСТОЯНИЯ =================
+const STATE_FILE = path.join(__dirname, 'game-state.json');
+
+function saveState() {
+  try {
+    const state = {
+      gameState,
+      teams,
+      savedAt: Date.now()
+    };
+    fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+    console.log('💾 Состояние сохранено');
+  } catch (e) {
+    console.error('Ошибка сохранения состояния:', e);
+  }
+}
+
+function loadState() {
+  try {
+    if (fs.existsSync(STATE_FILE)) {
+      const data = fs.readFileSync(STATE_FILE, 'utf-8');
+      const state = JSON.parse(data);
+      
+      if (state.gameState.isRunning && state.gameState.endTime) {
+        const remaining = state.gameState.endTime - Date.now();
+        if (remaining <= 0) {
+          state.gameState.isRunning = false;
+          state.gameState.endTime = null;
+          console.log('⏰ Игра автоматически остановлена при загрузке');
+        }
+      }
+      
+      gameState = state.gameState;
+      teams = state.teams;
+      console.log('✅ Состояние загружено');
+    }
+  } catch (e) {
+    console.log('📝 Новое состояние игры');
+  }
+}
+
+loadState();
+
+// ================= ROUTES =================
+
+// Логин команды
 app.post('/api/login', (req, res) => {
   const { teamCode } = req.body;
   if (!teamCode) return res.json({ success: false });
 
-  if (!teams[teamCode]) teams[teamCode] = { tripsHistory: [] };
+  if (!teams[teamCode]) {
+    teams[teamCode] = { tripsHistory: [] };
+  }
 
   res.json({ success: true, tripsHistory: teams[teamCode].tripsHistory });
 });
 
-// ---------------- STATUS ----------------
-app.get('/api/status', (req, res) => {
-  let remaining = null;
-  if (gameState.isRunning && gameState.endTime) {
-    remaining = Math.max(0, gameState.endTime - Date.now());
-  }
-  res.json({ ...gameState, remaining });
-});
-
-// ---------------- TRIP ----------------
+// Сделать поездку
 app.post('/api/trip', (req, res) => {
-  if (!gameState.isRunning) return res.json({ success: false, info: 'Игра не запущена' });
+  if (!gameState.isRunning) {
+    return res.json({ 
+      success: false, 
+      info: 'Игра ещё не началась!' 
+    });
+  }
 
   const { teamCode, address } = req.body;
-  if (!teamCode || !teams[teamCode]) return res.json({ success: false, info: 'Команда не найдена' });
-  if (!address) return res.json({ success: false, info: 'Введите адрес' });
-
-  // Проверяем адрес в data/address.json
-  const found = addresses.find(a => a.address.toLowerCase() === address.toLowerCase());
-  const tripInfo = found ? found.info : 'Адрес не найден';
-
-  const trip = { time: new Date().toLocaleTimeString(), address, info: tripInfo };
-  teams[teamCode].tripsHistory.push(trip);
-
-  res.json({ success: true, info: tripInfo, tripsHistory: teams[teamCode].tripsHistory });
-});
-
-// ---------------- ADMIN ----------------
-const ADMIN_PASSWORD = 'admin123';
-
-app.get('/api/admin/history', (req, res) => {
-  const allTrips = [];
-  for (let team in teams) {
-    teams[team].tripsHistory.forEach(trip => allTrips.push({ team, ...trip }));
+  
+  if (!teamCode || !teams[teamCode]) {
+    return res.json({ 
+      success: false, 
+      info: 'Команда не найдена' 
+    });
   }
-  res.json({ allTrips });
+
+  if (!address || address.trim() === '') {
+    return res.json({ 
+      success: false, 
+      info: 'Введите адрес' 
+    });
+  }
+
+  const normalizedAddress = address.trim().toLowerCase();
+  const foundAddress = addresses.find(a => 
+    a.address.toLowerCase() === normalizedAddress
+  );
+
+  const tripInfo = foundAddress 
+    ? foundAddress.info 
+    : 'По этому адресу ничего интересного не обнаружено';
+
+  const trip = {
+    time: new Date().toLocaleTimeString(),
+    address: address,
+    info: tripInfo
+  };
+
+  teams[teamCode].tripsHistory.push(trip);
+  
+  if (teams[teamCode].tripsHistory.length > 50) {
+    teams[teamCode].tripsHistory = teams[teamCode].tripsHistory.slice(-50);
+  }
+
+  saveState();
+
+  res.json({ 
+    success: true,
+    info: tripInfo,
+    tripsHistory: teams[teamCode].tripsHistory
+  });
 });
 
+// Статус игры
+app.get('/api/status', (req, res) => {
+  let remaining = null;
+  const serverTime = Date.now();
+  
+  if (gameState.isRunning && gameState.endTime) {
+    remaining = gameState.endTime - serverTime;
+    
+    if (remaining <= 0) {
+      gameState.isRunning = false;
+      gameState.endTime = null;
+      remaining = 0;
+      saveState();
+      console.log('⏰ Игра автоматически остановлена по таймеру');
+    }
+  }
+  
+  res.json({ 
+    ...gameState, 
+    remaining: remaining > 0 ? remaining : 0,
+    serverTime
+  });
+});
+
+// ================= ADMIN ROUTES =================
+
+// Старт игры
 app.post('/api/admin/start', (req, res) => {
   const { minutes, password } = req.body;
-  if (password !== ADMIN_PASSWORD) return res.json({ success: false, message: 'Неверный пароль' });
+  
+  if (password !== ADMIN_PASSWORD) {
+    return res.status(401).json({ message: 'Неверный пароль' });
+  }
+  
+  if (!minutes || isNaN(minutes) || minutes < 1) {
+    return res.status(400).json({ message: 'Неверное время' });
+  }
 
+  const now = Date.now();
+  
   gameState.isRunning = true;
-  gameState.endTime = Date.now() + minutes * 60000;
-  res.json({ success: true, message: `Игра запущена на ${minutes} мин` });
+  gameState.startTime = now;
+  gameState.endTime = now + minutes * 60000;
+  
+  saveState();
+  
+  console.log(`🎮 Игра запущена на ${minutes} минут`);
+  
+  res.json({ message: `✅ Игра запущена на ${minutes} мин.` });
 });
 
+// Остановка игры
 app.post('/api/admin/stop', (req, res) => {
   const { password } = req.body;
-  if (password !== ADMIN_PASSWORD) return res.json({ success: false, message: 'Неверный пароль' });
+  if (password !== ADMIN_PASSWORD) {
+    return res.status(401).json({ message: 'Неверный пароль' });
+  }
 
   gameState.isRunning = false;
   gameState.endTime = null;
-  res.json({ success: true, message: 'Игра остановлена' });
+  gameState.startTime = null;
+  
+  saveState();
+
+  res.json({ message: '⏹️ Игра остановлена' });
 });
 
+// Сброс всех данных
 app.post('/api/admin/reset', (req, res) => {
   const { password } = req.body;
-  if (password !== ADMIN_PASSWORD) return res.json({ success: false });
+  if (password !== ADMIN_PASSWORD) {
+    return res.status(401).json({ success: false });
+  }
 
   teams = {};
   gameState.isRunning = false;
   gameState.endTime = null;
-  res.json({ success: true });
+  gameState.startTime = null;
+  
+  saveState();
+  
+  res.json({ success: true, message: '🔄 Все данные сброшены' });
 });
 
-// ---------------- Отдать index ----------------
+// Получить все поездки для админа
+app.get('/api/admin/history', (req, res) => {
+  const allTrips = [];
+  Object.keys(teams).forEach(team => {
+    teams[team].tripsHistory.forEach(trip => {
+      allTrips.push({ team, ...trip });
+    });
+  });
+  
+  allTrips.sort((a, b) => {
+    if (a.time < b.time) return 1;
+    if (a.time > b.time) return -1;
+    return 0;
+  });
+  
+  res.json({ allTrips });
+});
+
+// ================= CATCH ALL =================
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(port, () => console.log(`Server running on port ${port}`));
+// ================= START SERVER =================
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📁 Файл с адресами: ${path.join(__dirname, 'data', 'addres.json')}`);
+  console.log(`📊 Загружено адресов: ${addresses.length}`);
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('\n💾 Сохраняем состояние перед остановкой...');
+  saveState();
+  server.close(() => {
+    console.log('👋 Сервер остановлен');
+    process.exit(0);
+  });
+});
+
+// Сохраняем состояние каждые 30 секунд
+setInterval(saveState, 30000);
