@@ -21,11 +21,11 @@ let teams = {};
 // ================= ЗАГРУЗКА АДРЕСОВ =================
 let addresses = [];
 try {
-  const data = fs.readFileSync(path.join(__dirname, 'data', 'addres.json'), 'utf-8');
+  const data = fs.readFileSync(path.join(__dirname, 'data', 'address.json'), 'utf-8');
   addresses = JSON.parse(data);
   console.log(`✅ Загружено ${addresses.length} адресов`);
 } catch (e) {
-  console.error('❌ Не удалось загрузить addres.json:', e.message);
+  console.error('❌ Не удалось загрузить address.json:', e.message);
   addresses = [];
 }
 
