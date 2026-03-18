@@ -12,7 +12,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 let teams = {}; // { teamCode: { tripsHistory: [] } }
 
 // ================= ЗАГРУЗКА АДРЕСОВ ИЗ ФАЙЛА =================
-const ADDRESS_FILE = path.join(__dirname, 'data', 'address.json'); // Новое имя файла
+const ADDRESS_FILE = path.join(__dirname, 'data', 'address.json');
 let addresses = [];
 let addressMap = new Map();
 
@@ -34,7 +34,7 @@ try {
     console.log(`✅ Успешно загружено ${addresses.length} адресов`);
     console.log('📋 Примеры адресов:');
     addresses.slice(0, 3).forEach((item, index) => {
-      console.log(`   ${index + 1}. "${item.address}" -> "${item.info}"`);
+      console.log(`   ${index + 1}. "${item.address}"`);
     });
   }
 } catch (e) {
@@ -76,14 +76,12 @@ function loadState() {
 
 loadState();
 
-// ================= ТЕСТОВЫЙ МАРШРУТ ДЛЯ ПРОВЕРКИ АДРЕСОВ =================
-app.get('/api/test-addresses', (req, res) => {
-  res.json({
-    total: addresses.length,
-    sample: addresses.slice(0, 5),
-    mapSize: addressMap.size
-  });
-});
+// ================= ФУНКЦИЯ ДЛЯ ФОРМАТИРОВАНИЯ ТЕКСТА =================
+function formatInfoText(text) {
+  if (!text) return text;
+  // Заменяем \n на HTML-тег <br> для переноса строки
+  return text.replace(/\\n/g, '<br>');
+}
 
 // ================= ОСНОВНЫЕ МАРШРУТЫ =================
 
@@ -114,7 +112,7 @@ app.post('/api/login', (req, res) => {
   });
 });
 
-// 👇 **ГЛАВНЫЙ МАРШРУТ ДЛЯ ПОЕЗДОК - ТЕПЕРЬ БЕЗ ПРОВЕРКИ ТАЙМЕРА**
+// 👇 ГЛАВНЫЙ МАРШРУТ ДЛЯ ПОЕЗДОК
 app.post('/api/trip', (req, res) => {
   const { teamCode, address } = req.body;
   
@@ -136,11 +134,30 @@ app.post('/api/trip', (req, res) => {
 
   // 🔍 ПОИСК АДРЕСА
   const normalizedAddress = address.trim().toLowerCase();
-  const tripInfo = addressMap.get(normalizedAddress);
   
-  // Формируем результат
+  // Пробуем разные варианты написания
+  const searchVariants = [
+    normalizedAddress,
+    normalizedAddress.replace(/\s+/g, ''),
+    normalizedAddress.replace(/-/g, ''),
+    normalizedAddress.replace(/-/g, ' '),
+    normalizedAddress.replace(/[-\s]/g, ''),
+  ];
+  
+  let tripInfo = null;
+  let foundVariant = null;
+
+  for (const variant of searchVariants) {
+    tripInfo = addressMap.get(variant);
+    if (tripInfo) {
+      foundVariant = variant;
+      break;
+    }
+  }
+
+  // Формируем результат с преобразованием переносов строк
   const resultInfo = tripInfo 
-    ? tripInfo
+    ? formatInfoText(tripInfo)  // ← ЗДЕСЬ ПРЕОБРАЗУЕМ \n В <br>
     : 'По этому адресу ничего интересного не обнаружено';
 
   // Создаем запись о поездке
@@ -149,7 +166,7 @@ app.post('/api/trip', (req, res) => {
     time: new Date().toLocaleTimeString('ru-RU'),
     timestamp: Date.now(),
     address: address,
-    info: resultInfo
+    info: resultInfo  // ← УЖЕ С <br>
   };
 
   // Добавляем в историю команды
@@ -173,7 +190,7 @@ app.post('/api/trip', (req, res) => {
   });
 });
 
-// 👇 МАРШРУТ ДЛЯ СИНХРОНИЗАЦИИ КОМАНДЫ
+// Маршрут для синхронизации команды
 app.get('/api/team/:teamCode/sync', (req, res) => {
   const { teamCode } = req.params;
   
@@ -233,7 +250,7 @@ app.post('/api/admin/reset', (req, res) => {
   res.json({ success: true, message: '🔄 Все данные сброшены' });
 });
 
-// ================= ПИНГ ДЛЯ UPTIME ROBOT =================
+// Пинг для Uptime Robot
 app.get('/api/ping', (req, res) => {
   res.json({ 
     status: 'ok', 
@@ -243,7 +260,7 @@ app.get('/api/ping', (req, res) => {
   });
 });
 
-// ================= ДЕБАГ МАРШРУТ =================
+// Дебаг маршрут для проверки адресов
 app.get('/api/debug/address/:address', (req, res) => {
   const searchAddress = req.params.address.toLowerCase().trim();
   const found = addressMap.get(searchAddress);
@@ -252,8 +269,8 @@ app.get('/api/debug/address/:address', (req, res) => {
     requested: req.params.address,
     normalized: searchAddress,
     found: !!found,
-    info: found || null,
-    allAddresses: Array.from(addressMap.keys()).slice(0, 10) // первые 10 для примера
+    info: found ? formatInfoText(found) : null,
+    allAddresses: Array.from(addressMap.keys()).slice(0, 10)
   });
 });
 
