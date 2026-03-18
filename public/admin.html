@@ -3,80 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Игра поездки с админом</title>
+<title>Админка игры</title>
+
 <style>
-body { font-family: Arial; margin:0; padding:0; background:#f8f8f8; }
+body { font-family: Arial; margin:0; background:#f4f4f4; }
 
 /* Логин */
 #login-screen {
-  display: flex; flex-direction: column; align-items:center; justify-content:center; height:100vh; padding:20px;
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  height:100vh; padding:20px;
 }
 #login-screen input, #login-screen button {
-  width:100%; max-width:400px; margin-bottom:10px; padding:10px; font-size:16px; border-radius:5px; box-sizing:border-box;
+  width:100%; max-width:400px; margin-bottom:10px; padding:10px; font-size:16px;
 }
-#login-screen button { background:#4CAF50; color:#fff; border:none; cursor:pointer; }
-#login-screen button:hover { background:#45a049; }
+#login-screen button { background:#4CAF50; color:#fff; border:none; }
 
-/* Игровой экран */
-#game { display:none; width:95%; max-width:500px; margin:0 auto; padding:10px; }
-#main-info { position: sticky; top:0; background:#fff; padding:10px; border-bottom:1px solid #ccc; z-index:10; display:flex; flex-direction:column; gap:5px; }
-#main-info span { font-weight:bold; }
-#main-info input, #main-info button { width:100%; padding:10px; font-size:16px; border-radius:5px; box-sizing:border-box; }
-#main-info button { cursor:pointer; background:#4CAF50; color:#fff; border:none; }
-#main-info button:hover { background:#45a049; }
+/* Админ */
+#admin-screen { display:none; padding:10px; }
 
-#history-box { height: calc(100vh - 130px); overflow-y:auto; padding:10px; margin-top:10px; border:1px solid #ccc; background:#fff; white-space:pre-wrap; }
-#tripsHistory { margin:0; padding-left:20px; list-style: decimal; }
-
-/* Анимация счетчика */
-@keyframes jump {0%{transform:scale(1);color:#000;}30%{transform:scale(1.5);color:#4CAF50;}60%{transform:scale(1.2);color:#000;}100%{transform:scale(1);color:#000;}}
-.jump { animation: jump 0.5s ease; }
-
-/* Админский экран */
-#admin-screen { display:none; width:95%; max-width:600px; margin:0 auto; padding:10px; }
-#admin-screen h2 { text-align:center; }
-#admin-screen table { width:100%; border-collapse:collapse; }
-#admin-screen th, #admin-screen td { border:1px solid #ccc; padding:5px; text-align:left; }
-#admin-screen th { background:#eee; }
-#admin-screen button { margin-top:10px; padding:10px; font-size:16px; border-radius:5px; cursor:pointer; background:#f44336; color:#fff; border:none; }
-#admin-screen button:hover { background:#d32f2f; }
-
-#admin-controls { display:flex; gap:10px; margin-bottom:10px; }
-#admin-controls button { flex:1; background:#2196F3; }
+#admin-controls {
+  display:flex; gap:10px; margin-bottom:10px;
+}
+#admin-controls button {
+  flex:1; padding:10px; font-size:16px; cursor:pointer;
+  background:#2196F3; color:#fff; border:none;
+}
 #admin-controls button:hover { background:#1976D2; }
+
+table { width:100%; border-collapse:collapse; background:#fff; }
+th, td { border:1px solid #ccc; padding:6px; text-align:left; }
+th { background:#eee; }
+
+#resetBtn {
+  margin-top:10px; width:100%; padding:10px;
+  background:#f44336; color:#fff; border:none; cursor:pointer;
+}
+#resetBtn:hover { background:#d32f2f; }
 </style>
 </head>
+
 <body>
 
-<!-- Логин -->
+<!-- ЛОГИН -->
 <div id="login-screen">
-  <input type="text" id="teamCode" placeholder="Введите код команды">
-  <input type="password" id="adminPass" placeholder="Пароль админа (если админ)">
+  <input type="password" id="adminPass" placeholder="Пароль админа">
   <button onclick="login()">Войти</button>
 </div>
 
-<!-- Игровой экран -->
-<div id="game">
-  <div id="main-info">
-    <span>Команда: <b id="teamCodeDisplay"></b></span>
-    <span>Поездок: <b id="tripsLeft">0</b></span>
-    <input type="text" id="addressInput" placeholder="Введите адрес">
-    <button onclick="goTrip()">Поехать</button>
-  </div>
-
-  <div id="history-box">
-    <ul id="tripsHistory"></ul>
-  </div>
-</div>
-
-<!-- Админский экран -->
+<!-- АДМИНКА -->
 <div id="admin-screen">
-  <h2>Админский панель</h2>
+  <h2>Админ панель</h2>
+
   <div id="admin-controls">
     <button onclick="startGame(30)">Старт 30 мин</button>
     <button onclick="startGame(45)">Старт 45 мин</button>
-    <button onclick="stopGame()">Остановить</button>
+    <button onclick="stopGame()">Стоп</button>
   </div>
+
   <table>
     <thead>
       <tr>
@@ -88,10 +71,93 @@ body { font-family: Arial; margin:0; padding:0; background:#f8f8f8; }
     </thead>
     <tbody id="adminHistory"></tbody>
   </table>
-  <button onclick="resetAllData()">Сбросить данные</button>
+
+  <button id="resetBtn" onclick="resetAllData()">Сбросить всё</button>
 </div>
 
-<script src="script.js"></script>
+<script>
+
+// ================= LOGIN =================
+function login() {
+  const pass = document.getElementById('adminPass').value;
+
+  if (pass !== 'admin123') {
+    alert('Неверный пароль');
+    return;
+  }
+
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-screen').style.display = 'block';
+
+  startAutoUpdate();
+}
+
+// ================= API =================
+async function fetchAdminData() {
+  try {
+    const res = await fetch('/api/admin/data');
+    const data = await res.json();
+
+    updateTable(data.allTrips);
+
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// ================= TABLE =================
+function updateTable(trips) {
+  const tbody = document.getElementById('adminHistory');
+  tbody.innerHTML = '';
+
+  trips.reverse().forEach(t => {
+    const tr = document.createElement('tr');
+
+    tr.innerHTML = `
+      <td>${t.team}</td>
+      <td>${t.time}</td>
+      <td>${t.address}</td>
+      <td>${t.info}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+// ================= AUTO =================
+function startAutoUpdate() {
+  fetchAdminData();
+  setInterval(fetchAdminData, 2000);
+}
+
+// ================= CONTROL =================
+async function startGame(minutes) {
+  const res = await fetch('/api/admin/start', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ minutes })
+  });
+
+  const data = await res.json();
+  alert(data.message);
+}
+
+async function stopGame() {
+  const res = await fetch('/api/admin/stop', { method:'POST' });
+  const data = await res.json();
+  alert(data.message);
+}
+
+async function resetAllData() {
+  if (!confirm('Удалить ВСЕ данные?')) return;
+
+  const res = await fetch('/api/admin/reset', { method:'POST' });
+  const data = await res.json();
+
+  alert(data.message);
+}
+
+</script>
 
 </body>
 </html>
