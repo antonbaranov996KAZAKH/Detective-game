@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Тест адресов</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f4f4f4; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h2>🔍 Тест поиска адресов</h2>
+    
+    <div>
+        <input type="text" id="addressInput" placeholder="Введите адрес" style="width:300px; padding:10px;">
+        <button onclick="testAddress()">Проверить</button>
+    </div>
+    
+    <div id="result"></div>
+    
+    <h3>Загруженные адреса:</h3>
+    <pre id="addressList">Загрузка...</pre>
+
+    <script>
+        async function testAddress() {
+            const address = document.getElementById('addressInput').value;
+            const res = await fetch(`/api/debug/address/${encodeURIComponent(address)}`);
+            const data = await res.json();
+            
+            document.getElementById('result').innerHTML = `
+                <h4>Результат:</h4>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+        }
+        
+        async function loadAddresses() {
+            const res = await fetch('/api/test-addresses');
+            const data = await res.json();
+            document.getElementById('addressList').innerHTML = 
+                JSON.stringify(data, null, 2);
+        }
+        
+        loadAddresses();
+    </script>
+</body>
+</html>
