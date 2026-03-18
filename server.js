@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ================= ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =================
-let gameState = {
+let gameState = {addres
   isRunning: false,
   endTime: null,
   startTime: null
@@ -20,7 +20,7 @@ let teams = {}; // { teamCode: { tripsHistory: [], lastActive: timestamp } }
 
 // ================= ЗАГРУЗКА АДРЕСОВ =================
 let addresses = [];
-const ADDRESS_FILE = path.join(__dirname, 'data', 'addres.json');
+const ADDRESS_FILE = path.join(__dirname, 'data', 'address.json');
 let addressMap = new Map();
 
 try {
