@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ================= ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =================
-let gameState = {addres
+let gameState = {
   isRunning: false,
   endTime: null,
   startTime: null
