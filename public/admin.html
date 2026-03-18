@@ -4,157 +4,89 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Админка - Детективная игра</title>
-  <link rel="stylesheet" href="style.css">
   <style>
     body {
+      font-family: Arial, sans-serif;
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
       min-height: 100vh;
+      margin: 0;
       padding: 20px;
+      color: #fff;
     }
     
     #admin-login {
       max-width: 400px;
       margin: 100px auto;
-      background: white;
+      background: rgba(255,255,255,0.1);
       padding: 30px;
       border-radius: 10px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    }
-    
-    #admin-login h2 {
-      text-align: center;
-      color: #333;
-      margin-bottom: 30px;
-    }
-    
-    #admin-login input,
-    #admin-login button {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 15px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      font-size: 16px;
-    }
-    
-    #admin-login button {
-      background: #2196F3;
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    
-    #admin-login button:hover {
-      background: #1976D2;
+      backdrop-filter: blur(10px);
     }
     
     #admin-panel {
       max-width: 1200px;
       margin: 20px auto;
-      background: white;
+      background: rgba(255,255,255,0.1);
       padding: 20px;
       border-radius: 10px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
     }
     
-    #admin-panel h2 {
-      color: #333;
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #2196F3;
-    }
-    
-    #admin-controls {
-      display: flex;
-      gap: 10px;
-      margin: 20px 0;
-      flex-wrap: wrap;
-    }
-    
-    #admin-controls button {
-      padding: 12px 20px;
-      background: #2196F3;
-      color: white;
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
       border: none;
       border-radius: 5px;
+      font-size: 16px;
+    }
+    
+    button {
+      background: #4CAF50;
+      color: white;
       cursor: pointer;
-      font-weight: bold;
       transition: background 0.3s;
     }
     
-    #admin-controls button:hover {
-      background: #1976D2;
-    }
-    
-    #admin-controls button:last-child {
-      background: #f44336;
-    }
-    
-    #admin-controls button:last-child:hover {
-      background: #d32f2f;
-    }
-    
-    #game-stats {
-      background: #f5f5f5;
-      padding: 15px;
-      border-radius: 5px;
-      margin: 20px 0;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
-    }
-    
-    #game-stats p {
-      margin: 0;
-      padding: 10px;
-      background: white;
-      border-radius: 5px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    button:hover {
+      background: #45a049;
     }
     
     table {
       width: 100%;
       border-collapse: collapse;
+      background: rgba(255,255,255,0.05);
       margin: 20px 0;
-      background: white;
     }
     
     th, td {
-      border: 1px solid #ddd;
       padding: 10px;
       text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
     }
     
     th {
-      background: #2196F3;
-      color: white;
-      font-weight: bold;
+      background: rgba(0,0,0,0.3);
     }
     
-    tr:nth-child(even) {
-      background: #f9f9f9;
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
     }
     
-    tr:hover {
-      background: #e3f2fd;
+    .stat-card {
+      background: rgba(255,255,255,0.05);
+      padding: 15px;
+      border-radius: 5px;
     }
     
     .danger-btn {
-      background: #f44336 !important;
-      margin-top: 20px;
+      background: #f44336;
     }
     
     .danger-btn:hover {
-      background: #d32f2f !important;
-    }
-    
-    .logout-btn {
-      background: #9e9e9e !important;
-    }
-    
-    .logout-btn:hover {
-      background: #757575 !important;
+      background: #d32f2f;
     }
   </style>
 </head>
@@ -164,27 +96,20 @@
   <h2>🔐 Панель администратора</h2>
   <input type="password" id="adminPass" placeholder="Введите пароль">
   <button onclick="adminLogin()">Войти</button>
-  <p style="text-align:center; margin-top:10px;">
-    <a href="/" style="color:#666;">← Вернуться в игру</a>
-  </p>
 </div>
 
 <div id="admin-panel" style="display:none;">
-  <h2>📊 Управление игрой</h2>
+  <h2>📊 Статистика игры</h2>
   
-  <div id="admin-controls">
-    <button onclick="startGame(15)">▶️ 15 минут</button>
-    <button onclick="startGame(30)">▶️ 30 минут</button>
-    <button onclick="startGame(45)">▶️ 45 минут</button>
-    <button onclick="startGame(60)">▶️ 60 минут</button>
-    <button onclick="stopGame()">⏹️ Стоп</button>
-  </div>
-  
-  <div id="game-stats">
-    <p><strong>Активных команд:</strong> <span id="statsTeams">0</span></p>
-    <p><strong>Всего поездок:</strong> <span id="statsTrips">0</span></p>
-    <p><strong>Статус игры:</strong> <span id="statsStatus">⏸️ Остановлена</span></p>
-    <p><strong>Времени осталось:</strong> <span id="statsTimeLeft">-</span></p>
+  <div class="stats">
+    <div class="stat-card">
+      <h3>👥 Команд</h3>
+      <p id="statsTeams" style="font-size: 24px;">0</p>
+    </div>
+    <div class="stat-card">
+      <h3>🚗 Всего поездок</h3>
+      <p id="statsTrips" style="font-size: 24px;">0</p>
+    </div>
   </div>
   
   <h3>📋 История всех поездок</h3>
@@ -203,14 +128,13 @@
   </div>
   
   <button onclick="resetAllData()" class="danger-btn">⚠️ СБРОСИТЬ ВСЕ ДАННЫЕ</button>
-  <button onclick="adminLogout()" class="logout-btn">🚪 Выйти</button>
+  <button onclick="adminLogout()">🚪 Выйти</button>
 </div>
 
 <script>
 const ADMIN_PASSWORD = 'admin123';
 let adminInterval = null;
 
-// Вход в админку
 function adminLogin() {
   const pass = document.getElementById('adminPass').value;
   if (pass !== ADMIN_PASSWORD) {
@@ -221,15 +145,10 @@ function adminLogin() {
   document.getElementById('admin-login').style.display = 'none';
   document.getElementById('admin-panel').style.display = 'block';
   
-  // Загружаем данные сразу
   loadAdminData();
-  
-  // Обновляем каждые 2 секунды
-  if (adminInterval) clearInterval(adminInterval);
-  adminInterval = setInterval(loadAdminData, 2000);
+  adminInterval = setInterval(loadAdminData, 3000);
 }
 
-// Выход из админки
 function adminLogout() {
   if (adminInterval) {
     clearInterval(adminInterval);
@@ -241,58 +160,31 @@ function adminLogout() {
   document.getElementById('adminPass').value = '';
 }
 
-// Загрузка данных
 function loadAdminData() {
-  // Загружаем историю
   fetch('/api/admin/history')
     .then(res => res.json())
     .then(data => {
       updateAdminTable(data.allTrips);
-      updateStats(data.allTrips);
+      document.getElementById('statsTeams').textContent = data.totalTeams || 0;
+      document.getElementById('statsTrips').textContent = data.allTrips?.length || 0;
     })
-    .catch(err => console.error('Ошибка загрузки истории:', err));
-  
-  // Загружаем статус игры
-  fetch('/api/status')
-    .then(res => res.json())
-    .then(data => {
-      const statusEl = document.getElementById('statsStatus');
-      const timeLeftEl = document.getElementById('statsTimeLeft');
-      
-      if (data.isRunning && data.remaining > 0) {
-        const minutes = Math.floor(data.remaining / 60000);
-        const seconds = Math.floor((data.remaining % 60000) / 1000);
-        statusEl.textContent = '▶️ Идет игра';
-        statusEl.style.color = '#4CAF50';
-        timeLeftEl.textContent = `${minutes}:${seconds.toString().padStart(2,'0')}`;
-      } else {
-        statusEl.textContent = '⏸️ Остановлена';
-        statusEl.style.color = '#f44336';
-        timeLeftEl.textContent = '-';
-      }
-    })
-    .catch(err => console.error('Ошибка загрузки статуса:', err));
+    .catch(err => console.error('Ошибка загрузки:', err));
 }
 
-// Обновление статистики
-function updateStats(trips) {
-  const teams = new Set(trips.map(t => t.team));
-  document.getElementById('statsTeams').textContent = teams.size;
-  document.getElementById('statsTrips').textContent = trips.length;
-}
-
-// Обновление таблицы
-function updateAdminTable(allTrips) {
+function updateAdminTable(trips) {
   const tbody = document.getElementById('adminHistory');
   tbody.innerHTML = '';
   
-  allTrips.slice(0, 200).forEach(trip => {
+  if (!trips || trips.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Пока нет поездок</td></tr>';
+    return;
+  }
+  
+  trips.slice(0, 100).forEach(trip => {
     const tr = document.createElement('tr');
     
-    // Выделяем ненайденные адреса
     if (trip.info === 'По этому адресу ничего интересного не обнаружено') {
-      tr.style.backgroundColor = '#fff3e0';
-      tr.style.color = '#666';
+      tr.style.opacity = '0.7';
     }
     
     tr.innerHTML = `
@@ -305,43 +197,9 @@ function updateAdminTable(allTrips) {
   });
 }
 
-// Управление игрой
-function startGame(minutes) {
-  fetch('/api/admin/start', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({minutes, password: ADMIN_PASSWORD})
-  })
-  .then(res => res.json())
-  .then(data => {
-    alert(data.message);
-    loadAdminData(); // Обновляем данные
-  })
-  .catch(() => alert('❌ Ошибка связи с сервером'));
-}
-
-function stopGame() {
-  fetch('/api/admin/stop', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({password: ADMIN_PASSWORD})
-  })
-  .then(res => res.json())
-  .then(data => {
-    alert(data.message);
-    loadAdminData(); // Обновляем данные
-  })
-  .catch(() => alert('❌ Ошибка связи с сервером'));
-}
-
 function resetAllData() {
-  if (!confirm('⚠️ ВНИМАНИЕ! Вы уверены, что хотите удалить ВСЕ данные игры? Это действие нельзя отменить!')) {
-    return;
-  }
-  
-  if (!confirm('Последнее предупреждение! Все поездки и команды будут безвозвратно удалены. Продолжить?')) {
-    return;
-  }
+  if (!confirm('⚠️ ВНИМАНИЕ! Вы уверены, что хотите удалить ВСЕ данные игры?')) return;
+  if (!confirm('Последнее предупреждение! Это действие нельзя отменить.')) return;
   
   fetch('/api/admin/reset', {
     method: 'POST',
@@ -351,21 +209,14 @@ function resetAllData() {
   .then(res => res.json())
   .then(data => {
     if (data.success) {
-      alert('✅ Все данные успешно сброшены');
-      loadAdminData(); // Обновляем пустую таблицу
+      alert('✅ Все данные сброшены');
+      loadAdminData();
     } else {
       alert('❌ Ошибка при сбросе данных');
     }
   })
   .catch(() => alert('❌ Ошибка связи с сервером'));
 }
-
-// Защита от случайного выхода
-window.addEventListener('beforeunload', function() {
-  if (adminInterval) {
-    clearInterval(adminInterval);
-  }
-});
 </script>
 </body>
 </html>
