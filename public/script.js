@@ -4,20 +4,23 @@ let teamCode = '';
 let tripCounter = 0;
 
 // ================= LOGIN =================
-function login() {
+async function login() {
   teamCode = document.getElementById('teamCode').value.trim();
   if (!teamCode) return alert('Введите код команды');
 
-  fetch('/api/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ teamCode })
-  })
-  .then(res => res.json())
-  .then(data => {
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ teamCode })
+    });
+
+    const data = await res.json();
+
     if (!data.success) return alert('Ошибка входа');
 
     tripCounter = data.tripsHistory.length;
+
     document.getElementById('tripsLeft').textContent = tripCounter;
     document.getElementById('teamCodeDisplay').textContent = teamCode;
 
@@ -25,43 +28,54 @@ function login() {
 
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('game').style.display = 'block';
-  });
+
+  } catch (err) {
+    console.error(err);
+    alert('Ошибка связи с сервером');
+  }
 }
 
 // ================= TIMER =================
 function updateTimer() {
+  const timerEl = document.getElementById('timer');
+  if (!timerEl) return; // защита от ошибки
+
   if (!isGameRunning || !endTime) {
-    document.getElementById('timer').textContent = "Остановлен";
+    timerEl.textContent = "Остановлен";
     return;
   }
 
-  const now = Date.now();
-  const diff = endTime - now;
+  const diff = endTime - Date.now();
 
   if (diff <= 0) {
     isGameRunning = false;
-    document.getElementById('timer').textContent = "00:00";
+    timerEl.textContent = "00:00";
     return;
   }
 
   const minutes = Math.floor(diff / 60000);
   const seconds = Math.floor((diff % 60000) / 1000);
 
-  document.getElementById('timer').textContent =
+  timerEl.textContent =
     `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-function fetchGameStatus() {
-  fetch('/api/status')
-    .then(res => res.json())
-    .then(data => {
-      isGameRunning = data.isRunning;
-      endTime = data.endTime;
-    });
+// ================= STATUS =================
+async function fetchGameStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+
+    isGameRunning = data.isRunning;
+    endTime = data.endTime;
+
+  } catch (err) {
+    console.error('Ошибка статуса:', err);
+  }
 }
 
 // ================= TRIP =================
-function goTrip() {
+async function goTrip() {
   if (!isGameRunning) {
     alert('Игра ещё не началась!');
     return;
@@ -72,13 +86,15 @@ function goTrip() {
 
   if (!confirm('Вы действительно хотите совершить поездку?')) return;
 
-  fetch('/api/trip', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ teamCode, address })
-  })
-  .then(res => res.json())
-  .then(data => {
+  try {
+    const res = await fetch('/api/trip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ teamCode, address })
+    });
+
+    const data = await res.json();
+
     if (!data.success) return alert(data.info);
 
     tripCounter++;
@@ -92,28 +108,51 @@ function goTrip() {
     tripsEl.classList.add('jump');
 
     updateHistory(data.tripsHistory);
-    alert(data.info);
+
+    document.getElementById('addressInput').value = '';
 
     const historyBox = document.getElementById('history-box');
     historyBox.scrollTop = historyBox.scrollHeight;
-  });
+
+    alert(data.info);
+
+  } catch (err) {
+    console.error(err);
+    alert('Ошибка сервера');
+  }
 }
 
 // ================= ADMIN =================
-function startGame(minutes) {
-  fetch('/api/admin/start', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ minutes })
-  })
-  .then(res => res.json())
-  .then(data => alert(data.message));
+async function startGame(minutes) {
+  try {
+    const res = await fetch('/api/admin/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ minutes })
+    });
+
+    const data = await res.json();
+    alert(data.message);
+
+  } catch (err) {
+    console.error(err);
+    alert('Ошибка запуска');
+  }
 }
 
-function stopGame() {
-  fetch('/api/admin/stop', { method: 'POST' })
-    .then(res => res.json())
-    .then(data => alert(data.message));
+async function stopGame() {
+  try {
+    const res = await fetch('/api/admin/stop', {
+      method: 'POST'
+    });
+
+    const data = await res.json();
+    alert(data.message);
+
+  } catch (err) {
+    console.error(err);
+    alert('Ошибка остановки');
+  }
 }
 
 // ================= HISTORY =================
