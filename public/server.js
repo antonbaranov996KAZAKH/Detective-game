@@ -20,7 +20,7 @@ let teams = {}; // { teamCode: { tripsHistory: [], lastActive: timestamp } }
 
 // ================= ЗАГРУЗКА АДРЕСОВ =================
 let addresses = [];
-const ADDRESS_FILE = path.join(__dirname, 'data', 'addres.json');
+const ADDRESS_FILE = path.join(__dirname, 'data', 'address.json');
 let addressMap = new Map();
 
 try {
