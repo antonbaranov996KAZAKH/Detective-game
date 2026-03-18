@@ -1,163 +1,157 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Админка игры</title>
-
-<style>
-body { font-family: Arial; margin:0; background:#f4f4f4; }
-
-/* Логин */
-#login-screen {
-  display:flex; flex-direction:column; justify-content:center; align-items:center;
-  height:100vh; padding:20px;
-}
-#login-screen input, #login-screen button {
-  width:100%; max-width:400px; margin-bottom:10px; padding:10px; font-size:16px;
-}
-#login-screen button { background:#4CAF50; color:#fff; border:none; }
-
-/* Админ */
-#admin-screen { display:none; padding:10px; }
-
-#admin-controls {
-  display:flex; gap:10px; margin-bottom:10px;
-}
-#admin-controls button {
-  flex:1; padding:10px; font-size:16px; cursor:pointer;
-  background:#2196F3; color:#fff; border:none;
-}
-#admin-controls button:hover { background:#1976D2; }
-
-table { width:100%; border-collapse:collapse; background:#fff; }
-th, td { border:1px solid #ccc; padding:6px; text-align:left; }
-th { background:#eee; }
-
-#resetBtn {
-  margin-top:10px; width:100%; padding:10px;
-  background:#f44336; color:#fff; border:none; cursor:pointer;
-}
-#resetBtn:hover { background:#d32f2f; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Админка - Детективная игра</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: #1a1a2e; color: #fff; }
+    table { background: #16213e; color: #fff; }
+    th { background: #0f3460; color: #fff; }
+    td { border-color: #0f3460; }
+    button { background: #e94560; }
+    button:hover { background: #d43f5e; }
+  </style>
 </head>
-
 <body>
 
-<!-- ЛОГИН -->
-<div id="login-screen">
+<div id="admin-login">
+  <h2>🔐 Вход для администратора</h2>
   <input type="password" id="adminPass" placeholder="Пароль админа">
-  <button onclick="login()">Войти</button>
+  <button onclick="adminLogin()">Войти</button>
 </div>
 
-<!-- АДМИНКА -->
-<div id="admin-screen">
-  <h2>Админ панель</h2>
-
+<div id="admin-panel" style="display:none;">
+  <h2>📊 Панель управления</h2>
+  
   <div id="admin-controls">
-    <button onclick="startGame(30)">Старт 30 мин</button>
-    <button onclick="startGame(45)">Старт 45 мин</button>
-    <button onclick="stopGame()">Стоп</button>
+    <button onclick="startGame(30)">▶️ 30 минут</button>
+    <button onclick="startGame(45)">▶️ 45 минут</button>
+    <button onclick="startGame(60)">▶️ 60 минут</button>
+    <button onclick="stopGame()">⏹️ Стоп</button>
   </div>
-
+  
+  <div id="game-stats">
+    <h3>📈 Статистика:</h3>
+    <p>Команд: <span id="statsTeams">0</span></p>
+    <p>Всего поездок: <span id="statsTrips">0</span></p>
+    <p>Статус: <span id="statsStatus">⏸️ Остановлена</span></p>
+  </div>
+  
+  <h3>📋 История всех поездок:</h3>
   <table>
     <thead>
       <tr>
         <th>Команда</th>
         <th>Время</th>
         <th>Адрес</th>
-        <th>Инфо</th>
+        <th>Информация</th>
       </tr>
     </thead>
     <tbody id="adminHistory"></tbody>
   </table>
-
-  <button id="resetBtn" onclick="resetAllData()">Сбросить всё</button>
+  
+  <button onclick="resetAllData()" style="background:#f44336;">⚠️ Сбросить все данные</button>
+  <button onclick="adminLogout()">🚪 Выйти</button>
 </div>
 
 <script>
+const ADMIN_PASSWORD = 'admin123';
 
-// ================= LOGIN =================
-function login() {
+function adminLogin() {
   const pass = document.getElementById('adminPass').value;
-
-  if (pass !== 'admin123') {
+  if (pass !== ADMIN_PASSWORD) {
     alert('Неверный пароль');
     return;
   }
-
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('admin-screen').style.display = 'block';
-
-  startAutoUpdate();
+  
+  document.getElementById('admin-login').style.display = 'none';
+  document.getElementById('admin-panel').style.display = 'block';
+  
+  loadAdminData();
+  setInterval(loadAdminData, 2000);
 }
 
-// ================= API =================
-async function fetchAdminData() {
-  try {
-    const res = await fetch('/api/admin/data');
-    const data = await res.json();
-
-    updateTable(data.allTrips);
-
-  } catch (e) {
-    console.error(e);
-  }
+function adminLogout() {
+  document.getElementById('admin-login').style.display = 'block';
+  document.getElementById('admin-panel').style.display = 'none';
+  document.getElementById('adminPass').value = '';
 }
 
-// ================= TABLE =================
-function updateTable(trips) {
+function loadAdminData() {
+  fetch('/api/admin/history')
+    .then(res => res.json())
+    .then(data => {
+      updateAdminTable(data.allTrips);
+      updateStats(data.allTrips);
+    })
+    .catch(err => console.error('Ошибка загрузки:', err));
+    
+  fetch('/api/status')
+    .then(res => res.json())
+    .then(data => {
+      const statusEl = document.getElementById('statsStatus');
+      if (data.isRunning) {
+        const remaining = Math.floor(data.remaining / 60000);
+        statusEl.textContent = `▶️ Идет (осталось ${remaining} мин)`;
+      } else {
+        statusEl.textContent = '⏸️ Остановлена';
+      }
+    });
+}
+
+function updateStats(trips) {
+  const teams = new Set(trips.map(t => t.team));
+  document.getElementById('statsTeams').textContent = teams.size;
+  document.getElementById('statsTrips').textContent = trips.length;
+}
+
+function updateAdminTable(allTrips) {
   const tbody = document.getElementById('adminHistory');
   tbody.innerHTML = '';
-
-  trips.reverse().forEach(t => {
+  
+  allTrips.slice(0, 100).forEach(trip => {
     const tr = document.createElement('tr');
-
-    tr.innerHTML = `
-      <td>${t.team}</td>
-      <td>${t.time}</td>
-      <td>${t.address}</td>
-      <td>${t.info}</td>
-    `;
-
+    tr.innerHTML = `<td>${trip.team}</td><td>${trip.time}</td><td>${trip.address}</td><td>${trip.info}</td>`;
     tbody.appendChild(tr);
   });
 }
 
-// ================= AUTO =================
-function startAutoUpdate() {
-  fetchAdminData();
-  setInterval(fetchAdminData, 2000);
-}
-
-// ================= CONTROL =================
-async function startGame(minutes) {
-  const res = await fetch('/api/admin/start', {
+function startGame(minutes) {
+  fetch('/api/admin/start', {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ minutes })
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({minutes, password: ADMIN_PASSWORD})
+  })
+  .then(res => res.json())
+  .then(data => alert(data.message));
+}
+
+function stopGame() {
+  fetch('/api/admin/stop', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({password: ADMIN_PASSWORD})
+  })
+  .then(res => res.json())
+  .then(data => alert(data.message));
+}
+
+function resetAllData() {
+  if (!confirm('Вы уверены? Все данные будут удалены!')) return;
+  
+  fetch('/api/admin/reset', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({password: ADMIN_PASSWORD})
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert(data.message);
+    loadAdminData();
   });
-
-  const data = await res.json();
-  alert(data.message);
 }
-
-async function stopGame() {
-  const res = await fetch('/api/admin/stop', { method:'POST' });
-  const data = await res.json();
-  alert(data.message);
-}
-
-async function resetAllData() {
-  if (!confirm('Удалить ВСЕ данные?')) return;
-
-  const res = await fetch('/api/admin/reset', { method:'POST' });
-  const data = await res.json();
-
-  alert(data.message);
-}
-
 </script>
-
 </body>
 </html>
