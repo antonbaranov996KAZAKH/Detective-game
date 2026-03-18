@@ -16,11 +16,7 @@ let gameState = {
 };
 
 // 👥 Команды и история
-let teams = {}; 
-// пример:
-// teams = {
-//   "123": { tripsHistory: [] }
-// }
+let teams = {};
 
 // -----------------------------
 // 🚀 Админ
@@ -36,8 +32,6 @@ app.post('/api/admin/start', (req, res) => {
     gameState.isRunning = true;
     gameState.endTime = Date.now() + minutes * 60000;
 
-    console.log('Игра запущена');
-
     res.json({ message: 'Таймер запущен', endTime: gameState.endTime });
   } catch (e) {
     console.error(e);
@@ -50,12 +44,51 @@ app.post('/api/admin/stop', (req, res) => {
     gameState.isRunning = false;
     gameState.endTime = null;
 
-    console.log('Игра остановлена');
-
     res.json({ message: 'Таймер остановлен' });
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: 'Ошибка сервера' });
+  }
+});
+
+// -----------------------------
+// 📊 История для админа
+
+app.get('/api/admin/history', (req, res) => {
+  try {
+    let allTrips = [];
+
+    for (let team in teams) {
+      teams[team].tripsHistory.forEach(trip => {
+        allTrips.push({
+          team,
+          ...trip
+        });
+      });
+    }
+
+    res.json({ allTrips });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: 'Ошибка сервера' });
+  }
+});
+
+// -----------------------------
+// 🧹 Сброс данных
+
+app.post('/api/admin/reset', (req, res) => {
+  try {
+    teams = {};
+    gameState = {
+      isRunning: false,
+      endTime: null
+    };
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false });
   }
 });
 
@@ -88,7 +121,6 @@ app.post('/api/login', (req, res) => {
       return res.json({ success: false });
     }
 
-    // создаём команду если нет
     if (!teams[teamCode]) {
       teams[teamCode] = {
         tripsHistory: []
@@ -154,6 +186,13 @@ app.post('/api/trip', (req, res) => {
       info: 'Ошибка сервера'
     });
   }
+});
+
+// -----------------------------
+// 📄 Fallback (ВАЖНО для Render)
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // -----------------------------
