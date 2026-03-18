@@ -92,6 +92,12 @@ body { font-family: Arial; margin:0; padding:0; background:#f8f8f8; }
 </div>
 
 <script>
+
+},1000);
+</script>
+</body>
+</html>
+
 // ================= GLOBAL =================
 let isGameRunning = false;
 let endTime = null;
@@ -104,7 +110,8 @@ function login() {
   const code = document.getElementById('teamCode').value.trim();
   const pass = document.getElementById('adminPass').value.trim();
 
-  if (pass === ADMIN_PASSWORD) {
+  if(pass === ADMIN_PASSWORD) {
+    // Вход админа
     fetch('/api/admin/history')
       .then(res => res.json())
       .then(data => {
@@ -114,16 +121,16 @@ function login() {
       })
       .catch(err => alert('Ошибка связи с сервером'));
   } else {
-    if (!code) return alert('Введите код команды');
+    if(!code) return alert('Введите код команды');
     teamCode = code;
     fetch('/api/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ teamCode })
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({teamCode})
     })
     .then(res => res.json())
     .then(data => {
-      if (!data.success) return alert('Ошибка входа');
+      if(!data.success) return alert('Ошибка входа');
       tripCounter = data.tripsHistory.length;
       document.getElementById('tripsLeft').textContent = tripCounter;
       document.getElementById('teamCodeDisplay').textContent = teamCode;
@@ -137,34 +144,37 @@ function login() {
 
 // ---------------- TIMER ----------------
 function updateTimer() {
-  if (!isGameRunning || !endTime) {
+  if(!isGameRunning || !endTime) {
     document.getElementById('timer').textContent = "Остановлен";
     return;
   }
   const diff = endTime - Date.now();
-  if (diff <= 0) {
+  if(diff <= 0) {
     isGameRunning = false;
     document.getElementById('timer').textContent = "00:00";
     return;
   }
-  const minutes = Math.floor(diff / 60000);
-  const seconds = Math.floor((diff % 60000) / 1000);
+  const minutes = Math.floor(diff/60000);
+  const seconds = Math.floor((diff%60000)/1000);
   document.getElementById('timer').textContent = `${minutes}:${seconds.toString().padStart(2,'0')}`;
 }
 
 function fetchGameStatus() {
   fetch('/api/status')
     .then(res => res.json())
-    .then(data => { isGameRunning = data.isRunning; endTime = data.endTime; })
+    .then(data => { 
+      isGameRunning = data.isRunning; 
+      endTime = data.endTime; 
+    })
     .catch(err => console.warn('Не удалось получить статус игры'));
 }
 
 // ---------------- TRIP ----------------
 function goTrip() {
-  if (!isGameRunning) return alert('Игра ещё не началась!');
+  if(!isGameRunning) return alert('Игра ещё не началась!');
   const address = document.getElementById('addressInput').value.trim();
-  if (!address) return alert('Введите адрес');
-  if (!confirm('Вы действительно хотите совершить поездку?')) return;
+  if(!address) return alert('Введите адрес');
+
   fetch('/api/trip', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -172,7 +182,7 @@ function goTrip() {
   })
   .then(res => res.json())
   .then(data => {
-    if (!data.success) return alert(data.info);
+    if(!data.success) return alert(data.info);
     tripCounter++;
     const tripsEl = document.getElementById('tripsLeft');
     tripsEl.textContent = tripCounter;
@@ -180,7 +190,6 @@ function goTrip() {
     void tripsEl.offsetWidth;
     tripsEl.classList.add('jump');
     updateHistory(data.tripsHistory);
-    alert(data.info);
   })
   .catch(err => alert('Ошибка связи с сервером'));
 }
@@ -201,7 +210,9 @@ function startGame(minutes) {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({minutes,password:ADMIN_PASSWORD})
-  }).then(res=>res.json()).then(data=>alert(data.message)).catch(()=>alert('Ошибка связи с сервером'));
+  }).then(res=>res.json())
+    .then(data=>alert(data.message))
+    .catch(()=>alert('Ошибка связи с сервером'));
 }
 
 function stopGame() {
@@ -209,7 +220,9 @@ function stopGame() {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({password:ADMIN_PASSWORD})
-  }).then(res=>res.json()).then(data=>alert(data.message)).catch(()=>alert('Ошибка связи с сервером'));
+  }).then(res=>res.json())
+    .then(data=>alert(data.message))
+    .catch(()=>alert('Ошибка связи с сервером'));
 }
 
 function resetAllData() {
@@ -218,12 +231,13 @@ function resetAllData() {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({password:ADMIN_PASSWORD})
-  })
-  .then(res=>res.json())
-  .then(data=>{
-    if(data.success){ alert('Данные сброшены'); document.getElementById('adminHistory').innerHTML='';}
-    else alert('Ошибка сброса');
-  }).catch(()=>alert('Ошибка связи с сервером'));
+  }).then(res=>res.json())
+    .then(data=>{
+      if(data.success){
+        alert('Данные сброшены');
+        document.getElementById('adminHistory').innerHTML='';
+      } else alert('Ошибка сброса');
+    }).catch(()=>alert('Ошибка связи с сервером'));
 }
 
 function updateAdminTable(allTrips) {
@@ -247,6 +261,3 @@ setInterval(()=>{
       .catch(()=>console.warn('Не удалось обновить админку'));
   }
 },1000);
-</script>
-</body>
-</html>
