@@ -4,74 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Детективная игра</title>
-  <style>
-    body { font-family: Arial; margin:0; padding:0; background:#f8f8f8; }
-
-    /* Логин */
-    #login-screen {
-      display: flex; flex-direction: column; align-items:center; justify-content:center; height:100vh; padding:20px;
-    }
-    #login-screen input, #login-screen button {
-      width:100%; max-width:400px; margin-bottom:10px; padding:10px; font-size:16px; border-radius:5px; box-sizing:border-box;
-    }
-    #login-screen button { background:#4CAF50; color:#fff; border:none; cursor:pointer; }
-    #login-screen button:hover { background:#45a049; }
-
-    /* Игровой экран */
-    #game { display:none; width:95%; max-width:500px; margin:0 auto; padding:10px; }
-    #main-info { position: sticky; top:0; background:#fff; padding:10px; border-bottom:1px solid #ccc; z-index:10; display:flex; flex-direction:column; gap:5px; }
-    #main-info span { font-weight:bold; }
-    #main-info input, #main-info button { width:100%; padding:10px; font-size:16px; border-radius:5px; box-sizing:border-box; }
-    #main-info button { cursor:pointer; background:#4CAF50; color:#fff; border:none; }
-    #main-info button:hover { background:#45a049; }
-    #history-box { height: calc(100vh - 130px); overflow-y:auto; padding:10px; margin-top:10px; border:1px solid #ccc; background:#fff; white-space:pre-wrap; }
-    #tripsHistory { margin:0; padding-left:20px; list-style: decimal; }
-
-    /* Анимация счетчика */
-    @keyframes jump {0%{transform:scale(1);color:#000;}30%{transform:scale(1.5);color:#4CAF50;}60%{transform:scale(1.2);color:#000;}100%{transform:scale(1);color:#000;}}
-    .jump { animation: jump 0.5s ease; }
-
-    /* Админский экран */
-    #admin-screen { display:none; width:95%; max-width:600px; margin:0 auto; padding:10px; }
-    #admin-screen h2 { text-align:center; }
-    #admin-screen table { width:100%; border-collapse:collapse; }
-    #admin-screen th, #admin-screen td { border:1px solid #ccc; padding:5px; text-align:left; }
-    #admin-screen th { background:#eee; }
-    #admin-screen button { margin-top:10px; padding:10px; font-size:16px; border-radius:5px; cursor:pointer; background:#f44336; color:#fff; border:none; }
-    #admin-screen button:hover { background:#d32f2f; }
-
-    #admin-controls { display:flex; gap:10px; margin-bottom:10px; }
-    #admin-controls button { flex:1; background:#2196F3; }
-    #admin-controls button:hover { background:#1976D2; }
-    
-    /* Уведомления */
-    .notification {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 15px 20px;
-      background: #4CAF50;
-      color: white;
-      border-radius: 5px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      z-index: 1000;
-      transition: opacity 0.3s;
-    }
-    .notification.error {
-      background: #f44336;
-    }
-    .notification.info {
-      background: #2196F3;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <!-- Уведомления -->
-<div id="notification" style="display:none;" class="notification"></div>
+<div id="notification" class="notification" style="display:none;"></div>
 
 <!-- Логин -->
 <div id="login-screen">
+  <h1>🔍 Детективная игра</h1>
   <input type="text" id="teamCode" placeholder="Введите код команды">
   <input type="password" id="adminPass" placeholder="Пароль админа (если админ)">
   <button onclick="login()">Войти</button>
@@ -82,197 +24,44 @@
   <div id="main-info">
     <span>Команда: <b id="teamCodeDisplay"></b></span>
     <span>Поездок: <b id="tripsLeft">0</b></span>
-    <span>Таймер: <b id="timer">Остановлен</b></span>
+    <span>Таймер: <b id="timer">⏸️ Остановлен</b></span>
     <input type="text" id="addressInput" placeholder="Введите адрес" onkeypress="if(event.key==='Enter') goTrip()">
-    <button onclick="goTrip()">Поехать</button>
+    <button onclick="goTrip()">🚗 Поехать</button>
+    <button onclick="logout()" style="background:#f44336;">🚪 Выйти</button>
   </div>
 
   <div id="history-box">
+    <h3>📜 История поездок:</h3>
     <ul id="tripsHistory"></ul>
   </div>
 </div>
 
 <!-- Админский экран -->
 <div id="admin-screen">
-  <h2>Админский панель</h2>
+  <h2>🔐 Админская панель</h2>
   <div id="admin-controls">
-    <button onclick="startGame(30)">Старт 30 мин</button>
-    <button onclick="startGame(45)">Старт 45 мин</button>
-    <button onclick="stopGame()">Остановить</button>
+    <button onclick="startGame(30)">▶️ Старт 30 мин</button>
+    <button onclick="startGame(45)">▶️ Старт 45 мин</button>
+    <button onclick="stopGame()">⏹️ Стоп</button>
+    <button onclick="logout()" style="background:#f44336;">🚪 Выйти</button>
   </div>
+  
+  <h3>📊 Все поездки:</h3>
   <table>
     <thead>
       <tr>
         <th>Команда</th>
         <th>Время</th>
         <th>Адрес</th>
-        <th>Инфо</th>
+        <th>Информация</th>
       </tr>
     </thead>
     <tbody id="adminHistory"></tbody>
   </table>
-  <button onclick="resetAllData()">Сбросить данные</button>
+  
+  <button onclick="resetAllData()" style="background:#f44336;">⚠️ Сбросить все данные</button>
 </div>
 
-<script>
-// ================= GLOBAL =================
-let isGameRunning = false;
-let endTime = null;
-let serverTimeDiff = 0; // Разница между серверным и локальным временем
-let teamCode = '';
-let tripCounter = 0;
-const ADMIN_PASSWORD = 'admin123';
-
-// Функция для показа уведомлений
-function showNotification(message, type = 'info') {
-  // ... (код уведомлений)
-}
-
-// ---------------- LOGIN ----------------
-function login() {
-  // ... (код логина)
-}
-
-// 👇 **ИСПРАВЛЕННЫЙ ТАЙМЕР**
-function updateTimer() {
-  const timerElement = document.getElementById('timer');
-  
-  if(!isGameRunning || !endTime) {
-    timerElement.textContent = "⏸️ Остановлен";
-    timerElement.style.color = '#888';
-    return;
-  }
-  
-  // Используем серверное время для синхронизации
-  const now = Date.now() + serverTimeDiff;
-  const diff = endTime - now;
-  
-  if(diff <= 0) {
-    // Таймер истек
-    isGameRunning = false;
-    timerElement.textContent = "⏰ 00:00";
-    timerElement.style.color = '#f44336';
-    
-    // Дополнительно проверяем на сервере
-    fetchGameStatus();
-    return;
-  }
-  
-  // Форматируем время
-  const minutes = Math.floor(diff / 60000);
-  const seconds = Math.floor((diff % 60000) / 1000);
-  
-  // Меняем цвет, когда мало времени
-  if (minutes < 1) {
-    timerElement.style.color = '#f44336'; // Красный
-  } else if (minutes < 5) {
-    timerElement.style.color = '#ff9800'; // Оранжевый
-  } else {
-    timerElement.style.color = '#4CAF50'; // Зеленый
-  }
-  
-  timerElement.textContent = `⏱️ ${minutes}:${seconds.toString().padStart(2,'0')}`;
-}
-
-// 👇 **ИСПРАВЛЕННЫЙ ЗАПРОС СТАТУСА**
-function fetchGameStatus() {
-  return fetch('/api/status')
-    .then(res => res.json())
-    .then(data => { 
-      // Синхронизируем время
-      if (data.serverTime) {
-        serverTimeDiff = data.serverTime - Date.now();
-      }
-      
-      isGameRunning = data.isRunning; 
-      endTime = data.endTime;
-      
-      // Обновляем таймер сразу
-      updateTimer();
-      
-      return data;
-    })
-    .catch(err => {
-      console.warn('Не удалось получить статус игры:', err);
-      return null;
-    });
-}
-
-// 👇 **ИСПРАВЛЕННАЯ ПОЕЗДКА**
-function goTrip() {
-  if(!isGameRunning) {
-    showNotification('⏸️ Игра ещё не началась или уже закончилась!', 'error');
-    return;
-  }
-  
-  const address = document.getElementById('addressInput').value.trim();
-  if(!address) {
-    showNotification('❌ Введите адрес', 'error');
-    return;
-  }
-
-  fetch('/api/trip', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({teamCode, address})
-  })
-  .then(res => res.json())
-  .then(data => {
-    if(!data.success) {
-      showNotification(data.info, 'error');
-      return;
-    }
-    
-    showNotification('✅ ' + data.info, 'success');
-    
-    tripCounter++;
-    const tripsEl = document.getElementById('tripsLeft');
-    tripsEl.textContent = tripCounter;
-    tripsEl.classList.remove('jump');
-    void tripsEl.offsetWidth;
-    tripsEl.classList.add('jump');
-    
-    updateHistory(data.tripsHistory);
-    document.getElementById('addressInput').value = '';
-  })
-  .catch(err => showNotification('❌ Ошибка связи с сервером', 'error'));
-}
-
-// ---------------- AUTO UPDATE ----------------
-let lastServerCheck = 0;
-
-// 👇 **УЛУЧШЕННЫЙ АВТООБНОВЛЯТОР**
-setInterval(() => {
-  // Проверяем статус каждые 2 секунды
-  if (Date.now() - lastServerCheck > 2000) {
-    lastServerCheck = Date.now();
-    fetchGameStatus();
-  }
-  
-  // Таймер обновляем каждую секунду
-  updateTimer();
-  
-  // Обновляем админку, если она открыта
-  if(document.getElementById('admin-screen').style.display === 'block'){
-    fetch('/api/admin/history')
-      .then(res => res.json())
-      .then(data => updateAdminTable(data.allTrips))
-      .catch(() => console.warn('Не удалось обновить админку'));
-  }
-}, 1000);
-
-// ---------------- INIT ----------------
-window.addEventListener('load', () => {
-  // Проверяем соединение при загрузке
-  fetchGameStatus().then(() => {
-    console.log('✅ Соединение с сервером установлено');
-    console.log('🕒 Разница с сервером:', serverTimeDiff, 'мс');
-    
-    // Показываем статус игры при загрузке
-    if (isGameRunning && endTime) {
-      const remaining = endTime - (Date.now() + serverTimeDiff);
-      const minutes = Math.floor(remaining / 60000);
-      showNotification(`⏱️ Игра в процессе! Осталось ${minutes} мин.`, 'info');
-    }
-  });
-});
+<script src="game.js"></script>
+</body>
+</html>
