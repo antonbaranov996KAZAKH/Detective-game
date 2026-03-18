@@ -140,7 +140,7 @@ function goTrip() {
   });
 }
 
-// ================= ИСТОРИЯ =================
+// ================= ИСТОРИЯ (обновлена для работы с <br>) =================
 function updateHistory(history) {
   const ul = document.getElementById('tripsHistory');
   if (!ul) return;
@@ -152,13 +152,26 @@ function updateHistory(history) {
     li.style.opacity = '0';
     li.style.animation = `fadeIn 0.3s ease ${index * 0.1}s forwards`;
     
-    if (h.info === 'По этому адресу ничего интересного не обнаружено') {
+    if (h.info.includes('ничего интересного')) {
       li.style.color = '#888';
-      li.innerHTML = `${h.time} — <span style="color:#888;">${h.address}</span> → <em>${h.info}</em>`;
+      li.style.backgroundColor = '#f9f9f9';
+      li.innerHTML = `
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color:#888;">${h.address}</span>
+          <span style="color:#999; font-size:0.9em;">${h.time}</span>
+        </div>
+        <div style="margin-top:5px; font-style:italic;">${h.info}</div>
+      `;
     } else {
-      li.style.color = '#000';
-      li.style.borderLeft = '3px solid #4CAF50';
-      li.innerHTML = `${h.time} — <strong>${h.address}</strong> → ${h.info}`;
+      li.style.borderLeft = '4px solid #4CAF50';
+      li.style.backgroundColor = '#ffffff';
+      li.innerHTML = `
+        <div style="display: flex; justify-content: space-between; margin-bottom:8px;">
+          <strong style="color:#2196F3; font-size:1.1em;">${h.address}</strong>
+          <span style="color:#666; font-size:0.9em;">${h.time}</span>
+        </div>
+        <div style="line-height:1.6; color:#333;">${h.info}</div>
+      `;
     }
     
     ul.appendChild(li);
@@ -188,7 +201,7 @@ function logout() {
 window.addEventListener('load', () => {
   console.log('🚀 Детективная игра загружена');
   
-  // Добавляем стили для анимации
+  // Добавляем стили
   if (!document.querySelector('#game-styles')) {
     const style = document.createElement('style');
     style.id = 'game-styles';
@@ -208,23 +221,53 @@ window.addEventListener('load', () => {
       .notification.success { background: #4CAF50; }
       .notification.error { background: #f44336; }
       .notification.info { background: #2196F3; }
+      
       @keyframes slideIn {
         from { transform: translateX(100%); opacity: 0; }
         to { transform: translateX(0); opacity: 1; }
       }
+      
       .jump {
         animation: jump 0.5s ease;
         display: inline-block;
       }
+      
       @keyframes jump {
         0% { transform: scale(1); }
         30% { transform: scale(1.5); color: #4CAF50; }
         60% { transform: scale(1.2); }
         100% { transform: scale(1); }
       }
+      
       @keyframes fadeIn {
         from { opacity: 0; transform: translateY(-10px); }
         to { opacity: 1; transform: translateY(0); }
+      }
+      
+      #tripsHistory {
+        list-style: none;
+        padding: 0;
+      }
+      
+      #tripsHistory li {
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+      }
+      
+      #tripsHistory li:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+      }
+      
+      #history-box {
+        max-height: 500px;
+        overflow-y: auto;
+        padding: 10px;
+        background: #f0f2f5;
+        border-radius: 10px;
       }
     `;
     document.head.appendChild(style);
