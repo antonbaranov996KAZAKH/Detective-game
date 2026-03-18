@@ -118,97 +118,96 @@
 // ================= GLOBAL =================
 let isGameRunning = false;
 let endTime = null;
+let serverTimeDiff = 0; // Разница между серверным и локальным временем
 let teamCode = '';
 let tripCounter = 0;
 const ADMIN_PASSWORD = 'admin123';
 
 // Функция для показа уведомлений
 function showNotification(message, type = 'info') {
-  const notification = document.getElementById('notification');
-  notification.textContent = message;
-  notification.className = `notification ${type}`;
-  notification.style.display = 'block';
-  
-  setTimeout(() => {
-    notification.style.display = 'none';
-  }, 3000);
+  // ... (код уведомлений)
 }
 
 // ---------------- LOGIN ----------------
 function login() {
-  const code = document.getElementById('teamCode').value.trim();
-  const pass = document.getElementById('adminPass').value.trim();
-
-  if(pass === ADMIN_PASSWORD) {
-    // Вход админа
-    fetch('/api/admin/history')
-      .then(res => res.json())
-      .then(data => {
-        updateAdminTable(data.allTrips);
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('admin-screen').style.display = 'block';
-      })
-      .catch(err => showNotification('Ошибка связи с сервером', 'error'));
-  } else {
-    if(!code) return showNotification('Введите код команды', 'error');
-    teamCode = code;
-    fetch('/api/login', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({teamCode})
-    })
-    .then(res => res.json())
-    .then(data => {
-      if(!data.success) return showNotification('Ошибка входа', 'error');
-      tripCounter = data.tripsHistory.length;
-      document.getElementById('tripsLeft').textContent = tripCounter;
-      document.getElementById('teamCodeDisplay').textContent = teamCode;
-      updateHistory(data.tripsHistory);
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('game').style.display = 'block';
-      showNotification('Вход выполнен успешно!', 'info');
-    })
-    .catch(err => showNotification('Ошибка связи с сервером', 'error'));
-  }
+  // ... (код логина)
 }
 
-// ---------------- TIMER ----------------
+// 👇 **ИСПРАВЛЕННЫЙ ТАЙМЕР**
 function updateTimer() {
+  const timerElement = document.getElementById('timer');
+  
   if(!isGameRunning || !endTime) {
-    document.getElementById('timer').textContent = "Остановлен";
+    timerElement.textContent = "⏸️ Остановлен";
+    timerElement.style.color = '#888';
     return;
   }
-  const diff = endTime - Date.now();
+  
+  // Используем серверное время для синхронизации
+  const now = Date.now() + serverTimeDiff;
+  const diff = endTime - now;
+  
   if(diff <= 0) {
+    // Таймер истек
     isGameRunning = false;
-    document.getElementById('timer').textContent = "00:00";
+    timerElement.textContent = "⏰ 00:00";
+    timerElement.style.color = '#f44336';
+    
+    // Дополнительно проверяем на сервере
+    fetchGameStatus();
     return;
   }
-  const minutes = Math.floor(diff/60000);
-  const seconds = Math.floor((diff%60000)/1000);
-  document.getElementById('timer').textContent = `${minutes}:${seconds.toString().padStart(2,'0')}`;
+  
+  // Форматируем время
+  const minutes = Math.floor(diff / 60000);
+  const seconds = Math.floor((diff % 60000) / 1000);
+  
+  // Меняем цвет, когда мало времени
+  if (minutes < 1) {
+    timerElement.style.color = '#f44336'; // Красный
+  } else if (minutes < 5) {
+    timerElement.style.color = '#ff9800'; // Оранжевый
+  } else {
+    timerElement.style.color = '#4CAF50'; // Зеленый
+  }
+  
+  timerElement.textContent = `⏱️ ${minutes}:${seconds.toString().padStart(2,'0')}`;
 }
 
+// 👇 **ИСПРАВЛЕННЫЙ ЗАПРОС СТАТУСА**
 function fetchGameStatus() {
-  fetch('/api/status')
+  return fetch('/api/status')
     .then(res => res.json())
     .then(data => { 
+      // Синхронизируем время
+      if (data.serverTime) {
+        serverTimeDiff = data.serverTime - Date.now();
+      }
+      
       isGameRunning = data.isRunning; 
-      endTime = data.endTime; 
+      endTime = data.endTime;
+      
+      // Обновляем таймер сразу
+      updateTimer();
+      
+      return data;
     })
-    .catch(err => console.warn('Не удалось получить статус игры'));
+    .catch(err => {
+      console.warn('Не удалось получить статус игры:', err);
+      return null;
+    });
 }
 
-// ---------------- TRIP ----------------
+// 👇 **ИСПРАВЛЕННАЯ ПОЕЗДКА**
 function goTrip() {
   if(!isGameRunning) {
-    showNotification('Игра ещё не началась!', 'error');
+    showNotification('⏸️ Игра ещё не началась или уже закончилась!', 'error');
     return;
   }
   
   const address = document.getElementById('addressInput').value.trim();
   if(!address) {
-    showNotification('Введите адрес', 'error');
+    showNotification('❌ Введите адрес', 'error');
     return;
   }
 
@@ -224,8 +223,7 @@ function goTrip() {
       return;
     }
     
-    // 👇 ВАЖНО: показываем информацию, которую вернул сервер
-    showNotification(data.info, 'info');
+    showNotification('✅ ' + data.info, 'success');
     
     tripCounter++;
     const tripsEl = document.getElementById('tripsLeft');
@@ -235,98 +233,26 @@ function goTrip() {
     tripsEl.classList.add('jump');
     
     updateHistory(data.tripsHistory);
-    document.getElementById('addressInput').value = ''; // Очищаем поле
+    document.getElementById('addressInput').value = '';
   })
-  .catch(err => showNotification('Ошибка связи с сервером', 'error'));
-}
-
-function updateHistory(history) {
-  const ul = document.getElementById('tripsHistory');
-  ul.innerHTML = '';
-  
-  // Показываем последние 20 поездок в обратном порядке (новые сверху)
-  history.slice(-20).reverse().forEach(h => {
-    const li = document.createElement('li');
-    
-    // 👇 Разным цветом выделяем найденные и ненайденные адреса
-    if (h.info === 'По этому адресу ничего интересного не обнаружено') {
-      li.style.color = '#888';
-      li.innerHTML = `${h.time} — <span style="color:#888;">${h.address}</span> → <em>${h.info}</em>`;
-    } else {
-      li.style.color = '#000';
-      li.innerHTML = `${h.time} — <strong>${h.address}</strong> → ${h.info}`;
-    }
-    
-    ul.appendChild(li);
-  });
-}
-
-// ---------------- ADMIN ----------------
-function startGame(minutes) {
-  fetch('/api/admin/start',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({minutes, password: ADMIN_PASSWORD})
-  })
-  .then(res => res.json())
-  .then(data => showNotification(data.message, 'success'))
-  .catch(() => showNotification('Ошибка связи с сервером', 'error'));
-}
-
-function stopGame() {
-  fetch('/api/admin/stop',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({password: ADMIN_PASSWORD})
-  })
-  .then(res => res.json())
-  .then(data => showNotification(data.message, 'success'))
-  .catch(() => showNotification('Ошибка связи с сервером', 'error'));
-}
-
-function resetAllData() {
-  if(!confirm('Вы точно хотите сбросить все данные?')) return;
-  
-  fetch('/api/admin/reset',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({password: ADMIN_PASSWORD})
-  })
-  .then(res => res.json())
-  .then(data => {
-    if(data.success){
-      showNotification('Данные сброшены', 'success');
-      document.getElementById('adminHistory').innerHTML = '';
-    } else {
-      showNotification('Ошибка сброса', 'error');
-    }
-  })
-  .catch(() => showNotification('Ошибка связи с сервером', 'error'));
-}
-
-function updateAdminTable(allTrips) {
-  const tbody = document.getElementById('adminHistory');
-  tbody.innerHTML = '';
-  
-  allTrips.slice(0, 100).forEach(trip => { // Показываем только последние 100
-    const tr = document.createElement('tr');
-    
-    // 👇 В админке тоже выделяем ненайденные адреса
-    if (trip.info === 'По этому адресу ничего интересного не обнаружено') {
-      tr.style.backgroundColor = '#f9f9f9';
-      tr.style.color = '#888';
-    }
-    
-    tr.innerHTML = `<td>${trip.team}</td><td>${trip.time}</td><td>${trip.address}</td><td>${trip.info}</td>`;
-    tbody.appendChild(tr);
-  });
+  .catch(err => showNotification('❌ Ошибка связи с сервером', 'error'));
 }
 
 // ---------------- AUTO UPDATE ----------------
+let lastServerCheck = 0;
+
+// 👇 **УЛУЧШЕННЫЙ АВТООБНОВЛЯТОР**
 setInterval(() => {
-  fetchGameStatus();
+  // Проверяем статус каждые 2 секунды
+  if (Date.now() - lastServerCheck > 2000) {
+    lastServerCheck = Date.now();
+    fetchGameStatus();
+  }
+  
+  // Таймер обновляем каждую секунду
   updateTimer();
   
+  // Обновляем админку, если она открыта
   if(document.getElementById('admin-screen').style.display === 'block'){
     fetch('/api/admin/history')
       .then(res => res.json())
@@ -336,12 +262,17 @@ setInterval(() => {
 }, 1000);
 
 // ---------------- INIT ----------------
-// Проверяем соединение при загрузке
 window.addEventListener('load', () => {
-  fetch('/api/status')
-    .then(() => console.log('✅ Соединение с сервером установлено'))
-    .catch(() => showNotification('Нет связи с сервером', 'error'));
+  // Проверяем соединение при загрузке
+  fetchGameStatus().then(() => {
+    console.log('✅ Соединение с сервером установлено');
+    console.log('🕒 Разница с сервером:', serverTimeDiff, 'мс');
+    
+    // Показываем статус игры при загрузке
+    if (isGameRunning && endTime) {
+      const remaining = endTime - (Date.now() + serverTimeDiff);
+      const minutes = Math.floor(remaining / 60000);
+      showNotification(`⏱️ Игра в процессе! Осталось ${minutes} мин.`, 'info');
+    }
+  });
 });
-</script>
-</body>
-</html>
