@@ -7,7 +7,7 @@
 <style>
 body { font-family: Arial; margin:0; padding:0; background:#f8f8f8; }
 
-/* Логин общий */
+/* Логин */
 #login-screen {
   display: flex; flex-direction: column; align-items:center; justify-content:center; height:100vh; padding:20px;
 }
@@ -41,6 +41,9 @@ body { font-family: Arial; margin:0; padding:0; background:#f8f8f8; }
 #admin-screen button { margin-top:10px; padding:10px; font-size:16px; border-radius:5px; cursor:pointer; background:#f44336; color:#fff; border:none; }
 #admin-screen button:hover { background:#d32f2f; }
 
+#admin-controls { display:flex; gap:10px; margin-bottom:10px; }
+#admin-controls button { flex:1; background:#2196F3; }
+#admin-controls button:hover { background:#1976D2; }
 </style>
 </head>
 <body>
@@ -69,6 +72,11 @@ body { font-family: Arial; margin:0; padding:0; background:#f8f8f8; }
 <!-- Админский экран -->
 <div id="admin-screen">
   <h2>Админский панель</h2>
+  <div id="admin-controls">
+    <button onclick="startGame(30)">Старт 30 мин</button>
+    <button onclick="startGame(45)">Старт 45 мин</button>
+    <button onclick="stopGame()">Остановить</button>
+  </div>
   <table>
     <thead>
       <tr>
@@ -83,124 +91,7 @@ body { font-family: Arial; margin:0; padding:0; background:#f8f8f8; }
   <button onclick="resetAllData()">Сбросить данные</button>
 </div>
 
-<script>
-let teamCode = '';
-let tripCounter = 0;
+<script src="script.js"></script>
 
-// Простейший пароль для админа
-const ADMIN_PASSWORD = 'admin123';
-
-function login() {
-  const code = document.getElementById('teamCode').value.trim();
-  const pass = document.getElementById('adminPass').value.trim();
-
-  if(pass === ADMIN_PASSWORD) {
-    // Вход админа
-    fetch('/api/admin/history')
-      .then(res => res.json())
-      .then(data => {
-        updateAdminTable(data.allTrips);
-        document.getElementById('login-screen').style.display='none';
-        document.getElementById('admin-screen').style.display='block';
-      });
-  } else {
-    // Игрок
-    if(!code) return alert('Введите код команды');
-    teamCode = code;
-    fetch('/api/login', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({teamCode})
-    })
-    .then(res=>res.json())
-    .then(data=>{
-      if(!data.success) return alert('Ошибка входа');
-      tripCounter = data.tripsHistory.length;
-      document.getElementById('tripsLeft').textContent = tripCounter;
-      document.getElementById('teamCodeDisplay').textContent = teamCode;
-      updateHistory(data.tripsHistory);
-      document.getElementById('login-screen').style.display='none';
-      document.getElementById('game').style.display='block';
-    });
-  }
-}
-function startGame(minutes) {
-  fetch('/api/admin/start', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ minutes })
-  })
-  .then(res => res.json())
-  .then(data => alert(data.message));
-}
-
-function stopGame() {
-  fetch('/api/admin/stop', { method: 'POST' })
-    .then(res => res.json())
-    .then(data => alert(data.message));
-}
-function goTrip() {
-  const address = document.getElementById('addressInput').value.trim();
-  if(!address) return alert('Введите адрес');
-
-  fetch('/api/trip', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({teamCode, address})
-  })
-  .then(res=>res.json())
-  .then(data=>{
-    tripCounter++;
-    const tripsEl = document.getElementById('tripsLeft');
-    tripsEl.textContent = tripCounter;
-    tripsEl.classList.remove('jump');
-    void tripsEl.offsetWidth;
-    tripsEl.classList.add('jump');
-
-    updateHistory(data.tripsHistory);
-    alert(data.info);
-
-    const historyBox = document.getElementById('history-box');
-    historyBox.scrollTop = historyBox.scrollHeight;
-  });
-}
-
-function updateHistory(history) {
-  const ul = document.getElementById('tripsHistory');
-  ul.innerHTML='';
-  history.forEach(h=>{
-    const li = document.createElement('li');
-    li.textContent = `${h.time} — ${h.address} → ${h.info}`;
-    ul.appendChild(li);
-  });
-}
-
-function updateAdminTable(allTrips) {
-  const tbody = document.getElementById('adminHistory');
-  tbody.innerHTML='';
-  allTrips.forEach(trip=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${trip.team}</td><td>${trip.time}</td><td>${trip.address}</td><td>${trip.info}</td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-function resetAllData() {
-  if(!confirm('Вы точно хотите сбросить все данные?')) return;
-  fetch('/api/admin/reset', {method:'POST'})
-    .then(res=>res.json())
-    .then(data=>{
-      if(data.success) {
-        alert('Данные сброшены');
-        document.getElementById('adminHistory').innerHTML='';
-      } else {
-        alert('Ошибка сброса');
-      }
-    });
-}
-  <button onclick="startGame(30)">Старт 30 мин</button>
-<button onclick="startGame(45)">Старт 45 мин</button>
-<button onclick="stopGame()">Остановить</button>
-</script>
 </body>
 </html>
