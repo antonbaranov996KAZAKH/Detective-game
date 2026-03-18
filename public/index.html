@@ -15,11 +15,14 @@
 <div id="login-screen">
   <h1>🔍 Детективная игра</h1>
   <input type="text" id="teamCode" placeholder="Введите код команды">
-  <input type="password" id="adminPass" placeholder="Пароль админа (если админ)">
+  <input type="password" id="adminPass" placeholder="Пароль админа">
   <button onclick="login()">Войти</button>
+  <p style="text-align:center; margin-top:10px; color:#666; font-size:12px;">
+    Для админов: введите пароль для входа в панель управления
+  </p>
 </div>
 
-<!-- Игровой экран -->
+<!-- Игровой экран (ТОЛЬКО ДЛЯ ИГРОКОВ) -->
 <div id="game">
   <div id="main-info">
     <span>Команда: <b id="teamCodeDisplay"></b></span>
@@ -36,31 +39,7 @@
   </div>
 </div>
 
-<!-- Админский экран -->
-<div id="admin-screen">
-  <h2>🔐 Админская панель</h2>
-  <div id="admin-controls">
-    <button onclick="startGame(30)">▶️ Старт 30 мин</button>
-    <button onclick="startGame(45)">▶️ Старт 45 мин</button>
-    <button onclick="stopGame()">⏹️ Стоп</button>
-    <button onclick="logout()" style="background:#f44336;">🚪 Выйти</button>
-  </div>
-  
-  <h3>📊 Все поездки:</h3>
-  <table>
-    <thead>
-      <tr>
-        <th>Команда</th>
-        <th>Время</th>
-        <th>Адрес</th>
-        <th>Информация</th>
-      </tr>
-    </thead>
-    <tbody id="adminHistory"></tbody>
-  </table>
-  
-  <button onclick="resetAllData()" style="background:#f44336;">⚠️ Сбросить все данные</button>
-</div>
+<!-- АДМИНКА УДАЛЕНА ИЗ ЭТОГО ФАЙЛА -->
 
 <script src="game.js"></script>
 </body>
