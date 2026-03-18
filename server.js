@@ -19,7 +19,7 @@ let teams = {}; // { teamCode: { tripsHistory: [] } }
 
 // ================= ЗАГРУЗКА АДРЕСОВ ИЗ ФАЙЛА =================
 let addresses = [];
-const ADDRESS_FILE = path.join(__dirname, 'data', 'addres.json');
+const ADDRESS_FILE = path.join(__dirname, 'data', 'address.json');
 
 try {
   console.log('📁 Читаем файл:', ADDRESS_FILE);
