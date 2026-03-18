@@ -1,35 +1,105 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
+
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Раздаём файлы из public
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json()); // чтобы парсить JSON при POST
+app.use(express.json());
 
-// Простейшее хранилище команд
-const teams = {
-  "team1": "1234",
-  "team2": "abcd",
-  "detectives": "topsecret"
-};
+// ---------------- Игровое состояние ----------------
+let gameState = { isRunning: false, endTime: null };
+let teams = {}; // команды и история поездок
 
-// Эндпоинт логина
-app.post('/login', (req, res) => {
-  const { login, password } = req.body;
+// ---------------- Загрузка адресов ----------------
+let addresses = [];
+try {
+  const data = fs.readFileSync(path.join(__dirname, 'data', 'address.json'), 'utf-8');
+  addresses = JSON.parse(data);
+} catch (e) {
+  console.error('Не удалось загрузить адреса:', e);
+}
 
-  if (teams[login] && teams[login] === password) {
-    res.json({ success: true, message: "Вход выполнен!" });
-  } else {
-    res.json({ success: false, message: "Неверный логин или пароль" });
-  }
+// ---------------- LOGIN ----------------
+app.post('/api/login', (req, res) => {
+  const { teamCode } = req.body;
+  if (!teamCode) return res.json({ success: false });
+
+  if (!teams[teamCode]) teams[teamCode] = { tripsHistory: [] };
+
+  res.json({ success: true, tripsHistory: teams[teamCode].tripsHistory });
 });
 
-// Всё остальное — отдадим index.html
+// ---------------- STATUS ----------------
+app.get('/api/status', (req, res) => {
+  let remaining = null;
+  if (gameState.isRunning && gameState.endTime) {
+    remaining = Math.max(0, gameState.endTime - Date.now());
+  }
+  res.json({ ...gameState, remaining });
+});
+
+// ---------------- TRIP ----------------
+app.post('/api/trip', (req, res) => {
+  if (!gameState.isRunning) return res.json({ success: false, info: 'Игра не запущена' });
+
+  const { teamCode, address } = req.body;
+  if (!teamCode || !teams[teamCode]) return res.json({ success: false, info: 'Команда не найдена' });
+  if (!address) return res.json({ success: false, info: 'Введите адрес' });
+
+  // Проверяем адрес в data/address.json
+  const found = addresses.find(a => a.address.toLowerCase() === address.toLowerCase());
+  const tripInfo = found ? found.info : 'Адрес не найден';
+
+  const trip = { time: new Date().toLocaleTimeString(), address, info: tripInfo };
+  teams[teamCode].tripsHistory.push(trip);
+
+  res.json({ success: true, info: tripInfo, tripsHistory: teams[teamCode].tripsHistory });
+});
+
+// ---------------- ADMIN ----------------
+const ADMIN_PASSWORD = 'admin123';
+
+app.get('/api/admin/history', (req, res) => {
+  const allTrips = [];
+  for (let team in teams) {
+    teams[team].tripsHistory.forEach(trip => allTrips.push({ team, ...trip }));
+  }
+  res.json({ allTrips });
+});
+
+app.post('/api/admin/start', (req, res) => {
+  const { minutes, password } = req.body;
+  if (password !== ADMIN_PASSWORD) return res.json({ success: false, message: 'Неверный пароль' });
+
+  gameState.isRunning = true;
+  gameState.endTime = Date.now() + minutes * 60000;
+  res.json({ success: true, message: `Игра запущена на ${minutes} мин` });
+});
+
+app.post('/api/admin/stop', (req, res) => {
+  const { password } = req.body;
+  if (password !== ADMIN_PASSWORD) return res.json({ success: false, message: 'Неверный пароль' });
+
+  gameState.isRunning = false;
+  gameState.endTime = null;
+  res.json({ success: true, message: 'Игра остановлена' });
+});
+
+app.post('/api/admin/reset', (req, res) => {
+  const { password } = req.body;
+  if (password !== ADMIN_PASSWORD) return res.json({ success: false });
+
+  teams = {};
+  gameState.isRunning = false;
+  gameState.endTime = null;
+  res.json({ success: true });
+});
+
+// ---------------- Отдать index ----------------
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+app.listen(port, () => console.log(`Server running on port ${port}`));
