@@ -1,10 +1,6 @@
 // ================= ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =================
-let isGameRunning = false;
-let endTime = null;
-let serverTimeDiff = 0;
 let teamCode = '';
 let tripCounter = 0;
-let lastSyncTime = 0;
 let syncInterval = null;
 
 // ================= УВЕДОМЛЕНИЯ =================
@@ -60,7 +56,7 @@ function login() {
     
     showNotification(`Добро пожаловать, команда ${teamCode}!`, 'success');
     
-    // 👇 ЗАПУСКАЕМ СИНХРОНИЗАЦИЮ
+    // Запускаем синхронизацию
     startSync();
   })
   .catch(err => showNotification('Ошибка связи с сервером', 'error'));
@@ -68,7 +64,6 @@ function login() {
 
 // ================= СИНХРОНИЗАЦИЯ =================
 function startSync() {
-  // Синхронизируем каждые 3 секунды
   if (syncInterval) clearInterval(syncInterval);
   syncInterval = setInterval(syncTeamData, 3000);
 }
@@ -87,102 +82,28 @@ function syncTeamData() {
     .then(res => res.json())
     .then(data => {
       if (data.success) {
-        // Обновляем историю, если она изменилась
         const currentLength = document.getElementById('tripsHistory').children.length;
         if (data.tripsHistory.length !== currentLength) {
-          console.log('🔄 Обнаружены изменения, синхронизируем...');
+          console.log('🔄 Обновление данных...');
           updateHistory(data.tripsHistory);
           tripCounter = data.tripsHistory.length;
           document.getElementById('tripsLeft').textContent = tripCounter;
-          
-          // Анимация обновления
-          const tripsEl = document.getElementById('tripsLeft');
-          tripsEl.classList.remove('jump');
-          void tripsEl.offsetWidth;
-          tripsEl.classList.add('jump');
-          
-          showNotification('📱 Данные синхронизированы', 'info');
         }
-        lastSyncTime = Date.now();
       }
     })
     .catch(err => console.warn('Ошибка синхронизации:', err));
 }
 
-// ================= ТАЙМЕР =================
-function updateTimer() {
-  const timerElement = document.getElementById('timer');
-  if (!timerElement) return;
-  
-  if(!isGameRunning || !endTime) {
-    timerElement.textContent = "⏸️ Остановлен";
-    timerElement.style.color = '#888';
-    return;
-  }
-  
-  const now = Date.now() + serverTimeDiff;
-  const diff = endTime - now;
-  
-  if(diff <= 0) {
-    isGameRunning = false;
-    timerElement.textContent = "⏰ 00:00";
-    timerElement.style.color = '#f44336';
-    fetchGameStatus();
-    showNotification('Время игры истекло!', 'info');
-    return;
-  }
-  
-  const minutes = Math.floor(diff / 60000);
-  const seconds = Math.floor((diff % 60000) / 1000);
-  
-  if (minutes < 1) {
-    timerElement.style.color = '#f44336';
-  } else if (minutes < 5) {
-    timerElement.style.color = '#ff9800';
-  } else {
-    timerElement.style.color = '#4CAF50';
-  }
-  
-  timerElement.textContent = `⏱️ ${minutes}:${seconds.toString().padStart(2,'0')}`;
-}
-
-// ================= СТАТУС ИГРЫ =================
-function fetchGameStatus() {
-  return fetch('/api/status')
-    .then(res => res.json())
-    .then(data => { 
-      if (data.serverTime) {
-        serverTimeDiff = data.serverTime - Date.now();
-      }
-      
-      isGameRunning = data.isRunning; 
-      endTime = data.endTime;
-      
-      updateTimer();
-      
-      return data;
-    })
-    .catch(err => {
-      console.warn('Не удалось получить статус игры:', err);
-      return null;
-    });
-}
-
 // ================= ПОЕЗДКА =================
 function goTrip() {
-  if(!isGameRunning) {
-    showNotification('⏸️ Игра ещё не началась!', 'error');
-    return;
-  }
-  
   const address = document.getElementById('addressInput').value.trim();
   if(!address) {
     showNotification('❌ Введите адрес', 'error');
     return;
   }
 
-  // Блокируем кнопку на время запроса
-  const goButton = event.target;
+  const goButton = document.querySelector('#main-info button:first-of-type');
+  const originalText = goButton.textContent;
   goButton.disabled = true;
   goButton.textContent = '⏳ Отправка...';
 
@@ -204,24 +125,18 @@ function goTrip() {
     const tripsEl = document.getElementById('tripsLeft');
     tripsEl.textContent = tripCounter;
     
+    // Анимация
     tripsEl.classList.remove('jump');
     void tripsEl.offsetWidth;
     tripsEl.classList.add('jump');
     
     updateHistory(data.tripsHistory);
     document.getElementById('addressInput').value = '';
-    
-    // 👇 ПОКАЗЫВАЕМ, КТО СДЕЛАЛ ПОЕЗДКУ
-    const lastTrip = data.tripsHistory[data.tripsHistory.length - 1];
-    if (lastTrip) {
-      showNotification(`🚗 Поездка засчитана!`, 'success');
-    }
   })
   .catch(err => showNotification('❌ Ошибка связи с сервером', 'error'))
   .finally(() => {
-    // Разблокируем кнопку
     goButton.disabled = false;
-    goButton.textContent = '🚗 Поехать';
+    goButton.textContent = originalText;
   });
 }
 
@@ -232,7 +147,6 @@ function updateHistory(history) {
   
   ul.innerHTML = '';
   
-  // Показываем последние 30 поездок
   history.slice(-30).reverse().forEach((h, index) => {
     const li = document.createElement('li');
     li.style.opacity = '0';
@@ -243,9 +157,7 @@ function updateHistory(history) {
       li.innerHTML = `${h.time} — <span style="color:#888;">${h.address}</span> → <em>${h.info}</em>`;
     } else {
       li.style.color = '#000';
-      li.style.borderLeftColor = '#4CAF50';
-      li.style.borderLeftWidth = '3px';
-      li.style.borderLeftStyle = 'solid';
+      li.style.borderLeft = '3px solid #4CAF50';
       li.innerHTML = `${h.time} — <strong>${h.address}</strong> → ${h.info}`;
     }
     
@@ -254,13 +166,12 @@ function updateHistory(history) {
   
   // Автоскролл вниз
   const historyBox = document.getElementById('history-box');
-  historyBox.scrollTop = historyBox.scrollHeight;
+  if (historyBox) historyBox.scrollTop = historyBox.scrollHeight;
 }
 
 // ================= ВЫХОД =================
 function logout() {
   stopSync();
-  
   teamCode = '';
   tripCounter = 0;
   
@@ -273,24 +184,11 @@ function logout() {
   showNotification('Вы вышли из системы', 'info');
 }
 
-// ================= АВТООБНОВЛЕНИЕ =================
-let lastServerCheck = 0;
-
-setInterval(() => {
-  if (Date.now() - lastServerCheck > 2000) {
-    lastServerCheck = Date.now();
-    fetchGameStatus();
-  }
-  
-  updateTimer();
-}, 1000);
-
 // ================= ИНИЦИАЛИЗАЦИЯ =================
 window.addEventListener('load', () => {
   console.log('🚀 Детективная игра загружена');
-  fetchGameStatus();
   
-  // Добавляем стили
+  // Добавляем стили для анимации
   if (!document.querySelector('#game-styles')) {
     const style = document.createElement('style');
     style.id = 'game-styles';
@@ -327,17 +225,6 @@ window.addEventListener('load', () => {
       @keyframes fadeIn {
         from { opacity: 0; transform: translateY(-10px); }
         to { opacity: 1; transform: translateY(0); }
-      }
-      #tripsHistory li {
-        padding: 8px;
-        margin: 4px 0;
-        background: #f9f9f9;
-        border-radius: 4px;
-        transition: all 0.3s;
-      }
-      #tripsHistory li:hover {
-        background: #f0f0f0;
-        transform: translateX(5px);
       }
     `;
     document.head.appendChild(style);
