@@ -15,50 +15,30 @@ let gameState = {
   startTime: null
 };
 
-let teams = {}; // { teamCode: { tripsHistory: [] } }
+// 👇 ХРАНИЛИЩЕ КОМАНД - ОДНО ДЛЯ ВСЕХ УСТРОЙСТВ
+let teams = {}; // { teamCode: { tripsHistory: [], lastActive: timestamp } }
 
-// ================= ЗАГРУЗКА АДРЕСОВ ИЗ ФАЙЛА =================
+// ================= ЗАГРУЗКА АДРЕСОВ =================
 let addresses = [];
-const ADDRESS_FILE = path.join(__dirname, 'data', 'address.json');
+const ADDRESS_FILE = path.join(__dirname, 'data', 'addres.json');
+let addressMap = new Map();
 
 try {
-  console.log('📁 Читаем файл:', ADDRESS_FILE);
-  
-  // Проверяем существует ли файл
-  if (!fs.existsSync(ADDRESS_FILE)) {
-    console.error('❌ Файл не найден!');
-  } else {
-    // Читаем файл
+  if (fs.existsSync(ADDRESS_FILE)) {
     const fileContent = fs.readFileSync(ADDRESS_FILE, 'utf-8');
-    console.log('📄 Содержимое файла (первые 200 символов):', fileContent.substring(0, 200));
-    
-    // Парсим JSON
     addresses = JSON.parse(fileContent);
     
-    console.log(`✅ Успешно загружено ${addresses.length} адресов`);
-    
-    // Показываем первые 3 адреса для проверки
-    console.log('📋 Примеры адресов:');
-    addresses.slice(0, 3).forEach((item, index) => {
-      console.log(`   ${index + 1}. "${item.address}" -> "${item.info}"`);
+    // Создаем карту для быстрого поиска
+    addresses.forEach(item => {
+      const normalizedAddress = item.address.toLowerCase().trim();
+      addressMap.set(normalizedAddress, item.info);
     });
+    
+    console.log(`✅ Загружено ${addresses.length} адресов`);
   }
 } catch (e) {
-  console.error('❌ Ошибка при загрузке адресов:', e.message);
-  addresses = [];
+  console.error('❌ Ошибка загрузки адресов:', e.message);
 }
-
-// ================= СОЗДАЕМ MAP ДЛЯ БЫСТРОГО ПОИСКА =================
-// Это ускорит поиск и сделает его регистронезависимым
-const addressMap = new Map();
-
-addresses.forEach(item => {
-  // Приводим адрес к нижнему регистру и убираем лишние пробелы
-  const normalizedAddress = item.address.toLowerCase().trim();
-  addressMap.set(normalizedAddress, item.info);
-});
-
-console.log(`🗺️ Создана карта поиска для ${addressMap.size} адресов`);
 
 // ================= ADMIN PASSWORD =================
 const ADMIN_PASSWORD = 'admin123';
@@ -91,12 +71,11 @@ function loadState() {
         if (remaining <= 0) {
           state.gameState.isRunning = false;
           state.gameState.endTime = null;
-          console.log('⏰ Игра автоматически остановлена при загрузке');
         }
       }
       
       gameState = state.gameState;
-      teams = state.teams;
+      teams = state.teams || {};
       console.log('✅ Состояние загружено');
     }
   } catch (e) {
@@ -106,18 +85,9 @@ function loadState() {
 
 loadState();
 
-// ================= ТЕСТОВЫЙ МАРШРУТ ДЛЯ ПРОВЕРКИ АДРЕСОВ =================
-app.get('/api/test-addresses', (req, res) => {
-  res.json({
-    total: addresses.length,
-    sample: addresses.slice(0, 5),
-    mapSize: addressMap.size
-  });
-});
-
 // ================= ОСНОВНЫЕ МАРШРУТЫ =================
 
-// Логин команды
+// 👇 УЛУЧШЕННЫЙ ЛОГИН - обновляем время последней активности
 app.post('/api/login', (req, res) => {
   const { teamCode } = req.body;
   
@@ -127,20 +97,33 @@ app.post('/api/login', (req, res) => {
 
   const sanitizedCode = teamCode.trim();
   
+  // Если команда новая - создаем
   if (!teams[sanitizedCode]) {
-    teams[sanitizedCode] = { tripsHistory: [] };
+    teams[sanitizedCode] = { 
+      tripsHistory: [],
+      createdAt: Date.now(),
+      lastActive: Date.now()
+    };
     console.log(`👥 Новая команда: ${sanitizedCode}`);
+  } else {
+    // Обновляем время последней активности
+    teams[sanitizedCode].lastActive = Date.now();
+    console.log(`👥 Команда ${sanitizedCode} зашла (всего устройств: считаем по сессиям)`);
   }
 
+  // Отправляем историю команды
   res.json({ 
     success: true, 
-    tripsHistory: teams[sanitizedCode].tripsHistory 
+    tripsHistory: teams[sanitizedCode].tripsHistory,
+    teamInfo: {
+      createdAt: teams[sanitizedCode].createdAt,
+      tripsCount: teams[sanitizedCode].tripsHistory.length
+    }
   });
 });
 
-// 👇 **ГЛАВНЫЙ МАРШРУТ ДЛЯ ПОЕЗДОК - ИСПОЛЬЗУЕТ ВАШ ФАЙЛ**
+// 👇 ПОЕЗДКА - синхронизируется для всей команды
 app.post('/api/trip', (req, res) => {
-  // Проверка: запущена ли игра
   if (!gameState.isRunning) {
     return res.json({ 
       success: false, 
@@ -150,7 +133,6 @@ app.post('/api/trip', (req, res) => {
 
   const { teamCode, address } = req.body;
   
-  // Проверка команды
   if (!teamCode || !teams[teamCode]) {
     return res.json({ 
       success: false, 
@@ -158,7 +140,6 @@ app.post('/api/trip', (req, res) => {
     });
   }
 
-  // Проверка адреса
   if (!address || typeof address !== 'string' || address.trim() === '') {
     return res.json({ 
       success: false, 
@@ -166,45 +147,59 @@ app.post('/api/trip', (req, res) => {
     });
   }
 
-  // 🔍 **НОРМАЛИЗУЕМ АДРЕС ДЛЯ ПОИСКА**
   const normalizedAddress = address.trim().toLowerCase();
-  
-  // 🔍 **ИЩЕМ В MAP (ЭТО БЫСТРЕЕ, ЧЕМ МАССИВ)**
   const tripInfo = addressMap.get(normalizedAddress);
   
-  // Формируем результат
   const resultInfo = tripInfo 
-    ? tripInfo  // Если нашли в файле
-    : 'По этому адресу ничего интересного не обнаружено'; // Если не нашли
+    ? tripInfo
+    : 'По этому адресу ничего интересного не обнаружено';
 
-  // Создаем запись о поездке
   const trip = {
+    id: Date.now() + Math.random().toString(36).substr(2, 5), // уникальный ID
     time: new Date().toLocaleTimeString('ru-RU'),
-    address: address, // сохраняем оригинальный ввод
-    info: resultInfo,
-    found: !!tripInfo // добавляем флаг для отладки
+    timestamp: Date.now(), // для сортировки
+    address: address,
+    info: resultInfo
   };
 
   // Добавляем в историю команды
   teams[teamCode].tripsHistory.push(trip);
+  teams[teamCode].lastActive = Date.now();
   
   // Ограничиваем историю
-  const MAX_TRIPS = 50;
+  const MAX_TRIPS = 100;
   if (teams[teamCode].tripsHistory.length > MAX_TRIPS) {
     teams[teamCode].tripsHistory = teams[teamCode].tripsHistory.slice(-MAX_TRIPS);
   }
 
-  // Сохраняем состояние
   saveState();
 
-  // Логируем для отладки
   console.log(`🚗 Команда ${teamCode}: "${address}" -> ${tripInfo ? 'НАЙДЕНО' : 'НЕ НАЙДЕНО'}`);
 
-  // Отправляем ответ
+  // 👇 ВАЖНО: отправляем ВСЮ историю команды, чтобы у всех устройств было одинаково
   res.json({ 
     success: true,
     info: resultInfo,
-    tripsHistory: teams[teamCode].tripsHistory
+    tripsHistory: teams[teamCode].tripsHistory,
+    timestamp: Date.now()
+  });
+});
+
+// 👇 НОВЫЙ МАРШРУТ - для принудительной синхронизации
+app.get('/api/team/:teamCode/sync', (req, res) => {
+  const { teamCode } = req.params;
+  
+  if (!teamCode || !teams[teamCode]) {
+    return res.json({ success: false, error: 'Команда не найдена' });
+  }
+  
+  // Обновляем время активности
+  teams[teamCode].lastActive = Date.now();
+  
+  res.json({
+    success: true,
+    tripsHistory: teams[teamCode].tripsHistory,
+    serverTime: Date.now()
   });
 });
 
@@ -221,7 +216,6 @@ app.get('/api/status', (req, res) => {
       gameState.endTime = null;
       remaining = 0;
       saveState();
-      console.log('⏰ Игра автоматически остановлена');
     }
   }
   
@@ -242,8 +236,8 @@ app.post('/api/admin/start', (req, res) => {
     return res.status(401).json({ message: 'Неверный пароль' });
   }
   
-  if (!minutes || isNaN(minutes) || minutes < 1 || minutes > 180) {
-    return res.status(400).json({ message: 'Введите корректное время (1-180 минут)' });
+  if (!minutes || isNaN(minutes) || minutes < 1) {
+    return res.status(400).json({ message: 'Неверное время' });
   }
 
   const now = Date.now();
@@ -271,7 +265,6 @@ app.post('/api/admin/stop', (req, res) => {
   gameState.startTime = null;
   
   saveState();
-  console.log('⏹️ Игра остановлена');
 
   res.json({ message: '⏹️ Игра остановлена' });
 });
@@ -280,7 +273,7 @@ app.post('/api/admin/stop', (req, res) => {
 app.post('/api/admin/reset', (req, res) => {
   const { password } = req.body;
   if (password !== ADMIN_PASSWORD) {
-    return res.status(401).json({ success: false, message: 'Неверный пароль' });
+    return res.status(401).json({ success: false });
   }
 
   teams = {};
@@ -289,42 +282,35 @@ app.post('/api/admin/reset', (req, res) => {
   gameState.startTime = null;
   
   saveState();
-  console.log('🔄 Все данные сброшены');
   
   res.json({ success: true, message: '🔄 Все данные сброшены' });
 });
 
-// Получить все поездки для админа
+// 👇 УЛУЧШЕННАЯ ИСТОРИЯ ДЛЯ АДМИНА
 app.get('/api/admin/history', (req, res) => {
   const allTrips = [];
+  const teamsInfo = [];
   
   Object.keys(teams).forEach(team => {
+    teamsInfo.push({
+      team,
+      tripsCount: teams[team].tripsHistory.length,
+      lastActive: teams[team].lastActive,
+      createdAt: teams[team].createdAt
+    });
+    
     teams[team].tripsHistory.forEach(trip => {
       allTrips.push({ team, ...trip });
     });
   });
   
-  // Сортируем по времени (новые сверху)
-  allTrips.sort((a, b) => {
-    if (a.time < b.time) return 1;
-    if (a.time > b.time) return -1;
-    return 0;
-  });
+  // Сортируем по времени
+  allTrips.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
-  res.json({ allTrips });
-});
-
-// ================= ДОПОЛНИТЕЛЬНЫЙ МАРШРУТ ДЛЯ ПРОВЕРКИ =================
-app.get('/api/debug/address/:address', (req, res) => {
-  const searchAddress = req.params.address.toLowerCase().trim();
-  const found = addressMap.get(searchAddress);
-  
-  res.json({
-    requested: req.params.address,
-    normalized: searchAddress,
-    found: !!found,
-    info: found || null,
-    allAddresses: Array.from(addressMap.keys())
+  res.json({ 
+    allTrips,
+    teamsInfo,
+    totalTeams: Object.keys(teams).length
   });
 });
 
@@ -337,10 +323,8 @@ app.get('*', (req, res) => {
 const server = app.listen(PORT, () => {
   console.log('\n=== 🚀 СЕРВЕР ЗАПУЩЕН ===');
   console.log(`Порт: ${PORT}`);
-  console.log(`Файл с адресами: ${ADDRESS_FILE}`);
   console.log(`Загружено адресов: ${addresses.length}`);
-  console.log(`Адресов в Map: ${addressMap.size}`);
-  console.log(`Статус игры: ${gameState.isRunning ? '▶️ Идет' : '⏸️ Остановлена'}`);
+  console.log(`Активных команд: ${Object.keys(teams).length}`);
   console.log('========================\n');
 });
 
@@ -353,3 +337,16 @@ process.on('SIGINT', () => {
     process.exit(0);
   });
 });
+
+// Периодическая очистка неактивных команд (опционально)
+setInterval(() => {
+  const now = Date.now();
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+  
+  Object.keys(teams).forEach(team => {
+    if (now - teams[team].lastActive > ONE_DAY) {
+      console.log(`🧹 Очистка неактивной команды: ${team}`);
+      delete teams[team];
+    }
+  });
+}, 60 * 60 * 1000); // Раз в час
