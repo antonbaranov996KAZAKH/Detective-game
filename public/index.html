@@ -92,8 +92,244 @@ body { font-family: Arial; margin:0; padding:0; background:#f8f8f8; }
 </div>
 
 <script>
+// Глобальные переменные
+let teamCode = '';
+let isAdmin = false;
+let updateInterval = null;
+let timerInterval = null;
 
-},1000);
+// ================ ЛОГИН ================
+async function login() {
+  const teamInput = document.getElementById('teamCode').value.trim();
+  const adminPass = document.getElementById('adminPass').value.trim();
+  
+  if (!teamInput && !adminPass) {
+    alert('Введите код команды или пароль админа');
+    return;
+  }
+  
+  // Проверка на админа
+  if (adminPass === 'admin123') {
+    isAdmin = true;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-screen').style.display = 'block';
+    startAdminAutoUpdate();
+    return;
+  }
+  
+  // Обычная команда
+  if (!teamInput) {
+    alert('Введите код команды');
+    return;
+  }
+  
+  teamCode = teamInput;
+  
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ teamCode })
+    });
+    
+    const data = await res.json();
+    
+    if (data.success) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('game').style.display = 'block';
+      document.getElementById('teamCodeDisplay').textContent = teamCode;
+      
+      // Загружаем историю поездок
+      updateTripsHistory(data.tripsHistory || []);
+      
+      // Запускаем обновление статуса
+      startStatusUpdates();
+    } else {
+      alert('Ошибка входа');
+    }
+  } catch (error) {
+    alert('Ошибка соединения с сервером');
+  }
+}
+
+// ================ ИГРОВЫЕ ФУНКЦИИ ================
+async function goTrip() {
+  const address = document.getElementById('addressInput').value.trim();
+  
+  if (!address) {
+    alert('Введите адрес');
+    return;
+  }
+  
+  try {
+    const res = await fetch('/api/trip', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ teamCode, address })
+    });
+    
+    const data = await res.json();
+    
+    if (data.success) {
+      // Очищаем поле ввода
+      document.getElementById('addressInput').value = '';
+      
+      // Обновляем историю
+      updateTripsHistory(data.tripsHistory || []);
+      
+      // Анимация счетчика
+      const tripsLeft = document.getElementById('tripsLeft');
+      tripsLeft.classList.add('jump');
+      setTimeout(() => tripsLeft.classList.remove('jump'), 500);
+      
+      // Показываем результат
+      alert(data.info);
+    } else {
+      alert(data.info || 'Ошибка при поездке');
+    }
+  } catch (error) {
+    alert('Ошибка соединения с сервером');
+  }
+}
+
+function updateTripsHistory(trips) {
+  const list = document.getElementById('tripsHistory');
+  list.innerHTML = '';
+  
+  // Показываем последние 20 поездок
+  trips.slice(-20).reverse().forEach(trip => {
+    const li = document.createElement('li');
+    li.textContent = `${trip.time} - ${trip.address} (${trip.info})`;
+    list.appendChild(li);
+  });
+  
+  document.getElementById('tripsLeft').textContent = trips.length;
+}
+
+// ================ СТАТУС ИГРЫ ================
+function startStatusUpdates() {
+  // Обновляем статус каждую секунду
+  if (timerInterval) clearInterval(timerInterval);
+  
+  updateStatus();
+  timerInterval = setInterval(updateStatus, 1000);
+}
+
+async function updateStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+    
+    const timerElement = document.getElementById('timer');
+    
+    if (data.isRunning && data.remaining > 0) {
+      const minutes = Math.floor(data.remaining / 60000);
+      const seconds = Math.floor((data.remaining % 60000) / 1000);
+      timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    } else {
+      timerElement.textContent = 'Остановлен';
+    }
+  } catch (error) {
+    console.error('Ошибка получения статуса:', error);
+  }
+}
+
+// ================ АДМИНСКИЕ ФУНКЦИИ ================
+function startAdminAutoUpdate() {
+  fetchAdminHistory();
+  if (updateInterval) clearInterval(updateInterval);
+  updateInterval = setInterval(fetchAdminHistory, 2000);
+}
+
+async function fetchAdminHistory() {
+  try {
+    const res = await fetch('/api/admin/history');
+    const data = await res.json();
+    updateAdminTable(data.allTrips || []);
+  } catch (error) {
+    console.error('Ошибка загрузки истории:', error);
+  }
+}
+
+function updateAdminTable(trips) {
+  const tbody = document.getElementById('adminHistory');
+  tbody.innerHTML = '';
+  
+  // Сортируем по времени (новые сверху)
+  trips.sort((a, b) => new Date(b.time) - new Date(a.time));
+  
+  trips.forEach(trip => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${trip.team}</td>
+      <td>${trip.time}</td>
+      <td>${trip.address}</td>
+      <td>${trip.info}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function startGame(minutes) {
+  try {
+    const res = await fetch('/api/admin/start', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ 
+        minutes,
+        password: 'admin123' // В реальном проекте брать из переменной
+      })
+    });
+    
+    const data = await res.json();
+    alert(data.message || 'Игра запущена');
+  } catch (error) {
+    alert('Ошибка запуска игры');
+  }
+}
+
+async function stopGame() {
+  try {
+    const res = await fetch('/api/admin/stop', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ password: 'admin123' })
+    });
+    
+    const data = await res.json();
+    alert(data.message || 'Игра остановлена');
+  } catch (error) {
+    alert('Ошибка остановки игры');
+  }
+}
+
+async function resetAllData() {
+  if (!confirm('Вы уверены, что хотите сбросить ВСЕ данные?')) return;
+  
+  try {
+    const res = await fetch('/api/admin/reset', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ password: 'admin123' })
+    });
+    
+    const data = await res.json();
+    if (data.success) {
+      alert('Все данные сброшены');
+      fetchAdminHistory(); // Обновляем таблицу
+    } else {
+      alert('Ошибка сброса данных');
+    }
+  } catch (error) {
+    alert('Ошибка соединения с сервером');
+  }
+}
+
+// Очистка интервалов при уходе со страницы
+window.addEventListener('beforeunload', function() {
+  if (timerInterval) clearInterval(timerInterval);
+  if (updateInterval) clearInterval(updateInterval);
+});
 </script>
 </body>
 </html>
